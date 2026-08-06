@@ -50,12 +50,13 @@ Kullanıcının belirlediği hedef bütçe: ${requestedBudget} TL.
 Seçeceğin 3-5 ürünün TOPLAM FİYATI, belirlenen bu ${requestedBudget} TL bütçesine MÜMKÜN OLDUĞUNCA ÇOK YAKIN (yaklaşık ±%5-10 bandında) olmalıdır.
 
 Kurallar:
-1. Kullanıcının belirttiği meslek, ilgi alanları (yazılımcı, mimar, kedi, kahve, kitap, bebek, şehir, şaka/truva, kurumsal, vb.), amaç ve duygusal tonu analiz et.
-2. Ürün veritabanındaki ID'leri seç. Fiyatların toplamı ${requestedBudget} TL bütçesine çok yakın olsun.
-3. Sevecen, sevimli, mesleğe/konsepte özgü Türkçe bir hediye kartı notu ("personalizedGiftNote") yaz.
-4. Kutuya konsepte ve kişiye özel sevimli bir isim ver ("boxTitle").
-5. Neden bu ürünleri seçtiğini açıklayan tatlı, samimi bir Hapy açıklaması yaz ("aiExplanation").
-6. Yanıtını STRICT JSON formatında ver.
+1. Kullanıcının belirttiği meslek, alıcı (bebek, çocuk, yeğen, eş, arkadaş, vb.), ilgi alanları, amaç ve duygusal tonu analiz et.
+2. KRİTİK YAŞ & ALICI KURALI: Eğer prompt bir çocuk, minik bebek veya yeğen (örn: "2 yaşındaki yeğenim") içinse, KESİNLİKLE kahve, yetişkin termos, 'Kral Baba' çorabı, kurumsal malzemeler veya yetişkin kart notu SEÇME! Bunun yerine peluş oyuncak, müslin örtü, sevimli kupa, trüf çikolata, müzik kutusu gibi çocuklara uygun neşeli ve sevimli ürünleri seç. Hediye kartı notunu da minik çocuğa/yeğene söylenecek tatlı, sevgi dolu bir dille yaz.
+3. Ürün veritabanındaki ID'leri seç. Fiyatların toplamı ${requestedBudget} TL bütçesine çok yakın olsun.
+4. Sevecen, sevimli, alıcıya/konsepte özgü Türkçe bir hediye kartı notu ("personalizedGiftNote") yaz.
+5. Kutuya konsepte ve kişiye özel sevimli bir isim ver ("boxTitle").
+6. Neden bu ürünleri seçtiğini açıklayan tatlı, samimi bir Hapy açıklaması yaz ("aiExplanation").
+7. Yanıtını STRICT JSON formatında ver.
 `;
 
       const response = await ai.models.generateContent({

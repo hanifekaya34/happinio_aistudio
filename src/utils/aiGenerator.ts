@@ -48,6 +48,19 @@ export function generateClientFallbackRecommendation(prompt: string, requestedBu
     if (parsedVal >= 200 && parsedVal <= 5000) targetBudget = parsedVal;
   }
 
+  // Child / Nephew / Toddler / Age detection
+  const isChildOrNephew =
+    lowerPrompt.includes('yeğen') ||
+    lowerPrompt.includes('yegen') ||
+    lowerPrompt.includes('çocuk') ||
+    lowerPrompt.includes('cocuk') ||
+    lowerPrompt.includes('ufaklık') ||
+    lowerPrompt.includes('torun') ||
+    /\b([1-9]|1[0-2])\s*yaş/.test(lowerPrompt);
+
+  const ageMatch = lowerPrompt.match(/\b([1-9]|1[0-2])\s*yaş/);
+  const ageStr = ageMatch ? ageMatch[1] + ' Yaşındaki' : '';
+
   // Roles & Professions dictionary
   const roleKeywords: Record<string, string[]> = {
     oyuncu: ['oyuncu', 'gamer', 'gaming', 'oyun', 'playstation', 'xbox', 'steam', 'twitch', 'oyun oynamayı', 'oyunculara', 'oyuncu eşime', 'oyuncu arkadaşıma'],
@@ -84,6 +97,9 @@ export function generateClientFallbackRecommendation(prompt: string, requestedBu
     themeKeywords[theme].some((kw) => lowerPrompt.includes(kw))
   );
 
+  // Generic words to ignore in token boost
+  const genericTokens = ['hediye', 'hediyesi', 'doğum', 'günü', 'dogum', 'gunu', 'için', 'icinc', 'almak', 'istiyorum', 'tane', 'kutu', 'kutusu', 'özel', 'ozel', 'biri'];
+
   // Score each product in catalog
   const scoredProducts = PRODUCTS.map((product) => {
     let score = 0;
@@ -91,13 +107,17 @@ export function generateClientFallbackRecommendation(prompt: string, requestedBu
     const descLower = product.description.toLowerCase();
     const catLower = product.category.toLowerCase();
 
-    // Direct token matching
-    const promptWords = lowerPrompt.split(/\s+/).filter((w) => w.length > 2);
+    // Direct token matching (ignoring generic tokens)
+    const promptWords = lowerPrompt
+      .split(/\s+/)
+      .map((w) => w.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, ''))
+      .filter((w) => w.length > 2 && !genericTokens.includes(w));
+
     promptWords.forEach((word) => {
-      if (product.tags.some((t) => t.toLowerCase().includes(word))) score += 12;
-      if (nameLower.includes(word)) score += 10;
-      if (catLower.includes(word)) score += 8;
-      if (descLower.includes(word)) score += 5;
+      if (product.tags.some((t) => t.toLowerCase().includes(word))) score += 15;
+      if (nameLower.includes(word)) score += 12;
+      if (catLower.includes(word)) score += 10;
+      if (descLower.includes(word)) score += 6;
     });
 
     // Theme scores
@@ -124,11 +144,48 @@ export function generateClientFallbackRecommendation(prompt: string, requestedBu
       if (role === 'sevgili' && (product.tags.includes('çikolata') || product.tags.includes('mum') || product.tags.includes('romantik') || product.tags.includes('kupa'))) score += 25;
     });
 
-    // Penalize baby/mom products if NOT requested in prompt
-    const isBabyProduct = product.boxTypes.includes('baby_mom') || product.tags.includes('bebek') || product.tags.includes('yeni anne') || nameLower.includes('bebek');
-    const userRequestedBaby = detectedRoles.includes('yeni_anne') || lowerPrompt.includes('bebek') || lowerPrompt.includes('anne');
-    if (isBabyProduct && !userRequestedBaby) {
-      score -= 300; // Heavily penalize baby items if user didn't ask for baby
+    // CHILD / NEPHEW RECIPIENT SPECIAL RULES
+    if (isChildOrNephew) {
+      // Heavily boost kid-friendly & cute items
+      const isKidFriendly =
+        product.tags.includes('pelus') ||
+        product.tags.includes('bebek') ||
+        product.tags.includes('çikolata') ||
+        product.tags.includes('tatlı') ||
+        product.tags.includes('lokum') ||
+        product.tags.includes('müzik kutusu') ||
+        product.tags.includes('sticker') ||
+        nameLower.includes('tavşan') ||
+        nameLower.includes('kedicik') ||
+        nameLower.includes('trüf');
+
+      if (isKidFriendly) {
+        score += 150;
+      }
+
+      // Heavily penalize adult-only items (coffee, thermos, adult socks, roll-on, corporate, leather planners)
+      const isAdultOnly =
+        product.tags.includes('kahve') ||
+        product.tags.includes('termos') ||
+        product.tags.includes('baba') ||
+        product.tags.includes('roll-on') ||
+        product.tags.includes('kurumsal') ||
+        product.tags.includes('onboarding') ||
+        nameLower.includes('kral baba') ||
+        nameLower.includes('filtre kahve') ||
+        nameLower.includes('yarın erken') ||
+        nameLower.includes('motivasyon defteri');
+
+      if (isAdultOnly) {
+        score -= 500;
+      }
+    } else {
+      // Penalize baby/mom products if NOT requested in prompt
+      const isBabyProduct = product.boxTypes.includes('baby_mom') || product.tags.includes('bebek') || product.tags.includes('yeni anne') || nameLower.includes('bebek');
+      const userRequestedBaby = detectedRoles.includes('yeni_anne') || lowerPrompt.includes('bebek') || lowerPrompt.includes('anne');
+      if (isBabyProduct && !userRequestedBaby) {
+        score -= 300; // Heavily penalize baby items if user didn't ask for baby
+      }
     }
 
     return { product, score };
@@ -185,7 +242,13 @@ export function generateClientFallbackRecommendation(prompt: string, requestedBu
   const hasHumor = detectedThemes.includes('mizah');
 
   let boxTitle = '';
-  if (hasGamer && hasSpouse && hasBirthday) {
+  if (isChildOrNephew) {
+    if (ageStr) {
+      boxTitle = `${ageStr} Minik Yeğenime Özel Sevimli Doğum Günü Kutusu 🧸🎈🎂`;
+    } else {
+      boxTitle = 'Minik Yeğenime Özel Sevimli Doğum Günü Kutusu 🧸🎈✨';
+    }
+  } else if (hasGamer && hasSpouse && hasBirthday) {
     boxTitle = 'Oyuncu Eşime Özel Doğum Günü Kutusu 🎮💖🎂';
   } else if (hasGamer && hasSpouse) {
     boxTitle = 'Oyuncu Eşime Özel Aşk & Oyun Keyfi Kutusu 🎮💖';
@@ -242,7 +305,9 @@ export function generateClientFallbackRecommendation(prompt: string, requestedBu
 
   // HYPER-PERSONALIZED DYNAMIC GIFT NOTE
   let personalizedGiftNote = '';
-  if (hasGamer && hasSpouse && hasBirthday) {
+  if (isChildOrNephew) {
+    personalizedGiftNote = `Canım minik yeğenim! Yeni yaşın sağlık, neşe, oyunlar ve rengarenk kahkahalarla dolsun! Seni çooook seven ailen... İyi ki doğdun minik mucize! 🎈🧸✨`;
+  } else if (hasGamer && hasSpouse && hasBirthday) {
     personalizedGiftNote = 'Hayatıma renk katan en tatlı oyun arkadaşım, biricik eşim... Doğum günün kutlu olsun! Yeni yaşında ve tüm oyun bölümlerinde el ele en yüksek skorları yapacağımız harika bir yıl dilerim! 🎮💖🎂';
   } else if (hasGamer && hasSpouse) {
     personalizedGiftNote = 'Hayatıma neşe katan en tatlı oyun arkadaşım... İyi ki varsın! Birlikte en keyifli skorları imzalayacağımız harika günlerimiz olsun. 🎮💖';
@@ -278,7 +343,9 @@ export function generateClientFallbackRecommendation(prompt: string, requestedBu
   const topItem2 = finalProducts[1]?.name || 'sürpriz hediyeler';
 
   let aiExplanation = '';
-  if (hasGamer && hasSpouse) {
+  if (isChildOrNephew) {
+    aiExplanation = `Minik yeğeninin yeni yaşı için ona neşe katacak yumuşacık sevimli peluş tavşanı ve lezzetli sürpriz parçaları ${totalPrice} TL bütçene tam oturacak şekilde seçtik! 🧸🎈`;
+  } else if (hasGamer && hasSpouse) {
     aiExplanation = `Eşinin oyun tutkusunu ve verdiğin değeri göz önüne alarak; oyun saatlerinde keyifle eşlik edecek ${topItem1} ve ${topItem2} gibi neşeli parçaları ${totalPrice} TL bütçene mükemmel oturacak şekilde seçtik!`;
   } else {
     aiExplanation = `Yazdığın "${promptSnippet}" detaylarını Joy Genie olarak büyük bir heyecanla analiz ettik! Belirttiğin ilgi alanlarına tam uyan ${topItem1} ve ${topItem2} parçalarını ${totalPrice} TL bütçene mükemmel oturacak şekilde seçtik.`;
