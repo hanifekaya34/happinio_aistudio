@@ -276,4 +276,10 @@ async function startServer() {
   });
 }
 
-startServer();
+// Export express app for serverless platforms like Vercel
+export default app;
+
+// Start Express Server only when not running on Vercel
+if (!process.env.VERCEL) {
+  startServer();
+}
