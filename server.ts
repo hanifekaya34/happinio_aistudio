@@ -56,11 +56,14 @@ Kullanıcının belirlediği hedef bütçe: ${requestedBudget} TL.
 Seçeceğin 3-5 ürünün TOPLAM FİYATI, belirlenen bu ${requestedBudget} TL bütçesine MÜMKÜN OLDUĞUNCA ÇOK YAKIN (yaklaşık ±%5-10 bandında) olmalıdır.
 
 Kurallar:
-1. Kullanıcının belirttiği meslek, alıcı (bebek, çocuk, yeğen, eş, arkadaş, vb.), ilgi alanları, amaç ve duygusal tonu analiz et.
+1. Kullanıcının belirttiği meslek, alıcı (kız kardeş, abla, erkek kardeş, abi, bebek, çocuk, yeğen, eş, sevgili, arkadaş, anne, baba vb.), ilgi alanları, amaç ve duygusal tonu analiz et.
 2. KRİTİK UNİQUE ÜRÜN KURALI: matchedItemIds dizisine KESİNLİKLE aynı ürünü birden fazla ekleme! Tüm seçilen ürün ID'leri birbirinden %100 FARKLI ve benzersiz olmalıdır.
-3. KRİTİK YAŞ & ALICI KURALI: Eğer prompt bir çocuk, minik bebek veya yeğen (örn: "2 yaşındaki yeğenim") içinse, KESİNLİKLE kahve, yetişkin termos, 'Kral Baba' çorabı, kurumsal malzemeler veya yetişkin kart notu SEÇME! Bunun yerine peluş oyuncak, müslin örtü, sevimli kupa, trüf çikolata, müzik kutusu gibi çocuklara uygun neşeli ve sevimli ürünleri seç. Hediye kartı notunu da minik çocuğa/yeğene söylenecek tatlı, sevgi dolu bir dille yaz.
-4. KRİTİK HEDİYE NOTU KURALI: Eğer kullanıcı promptunda açıkça "doğum günü", "yaş günü" veya "yeni yaş" BELİRTİLMEDİYSE, kart notunda ("personalizedGiftNote") KESİNLİKLE "İyi ki doğdun", "Doğum günün kutlu olsun" veya "Yeni yaşın" YAZMA! Konseptsiz genel tebrikler verme; örneğin Truva/şaka/esprili kutular için bol kahkahalı mizahi bir not, tebrik için başarı/teşekkür notu yaz.
-5. KRİTİK SEÇİM NEDENİ / AÇIKLAMA KURALI: aiExplanation alanında, seçtiğin ürünlerin neden bu kişinin ilgi alanlarına/konseptine (örn: Truva şakası, çocuk hediyesi, kahve gurmesi) birebir uyduğunu detaylıca ve samimi bir dille açıkla. Mekanik veya jenerik yüzdeler YAZMA.
+3. KRİTİK ALICI VE İLİŞKİ HİTAP KURALI: Promptta belirtilen ilişkiye (kız kardeş, abla, erkek kardeş, abi, anne, baba, eş, sevgili, arkadaş vb.) BİREBİR uygun bir dille ve hitapla yaz!
+   - Eğer hediye KIZ KARDEŞ, ABLA, KARDEŞ içinse; kart notunda ("personalizedGiftNote") ve kutu başlığında ("boxTitle") KESİNLİKLE 'sevgilim', 'aşkım', 'biricik eşim' gibi romantik ifadeler KULLANMA! Bunun yerine 'Canım Kız Kardeşim', 'Canım Ablam', 'Canım Kardeşim' gibi sevecen kardeşlik hitaplarını kullan.
+   - Eğer hediye çocuk/bebek/yeğen içinse; KESİNLİKLE yetişkin kahveleri, termoslar, babalar günü ürünleri seçme; oyuncak, sevimli kupa, tatlı çikolata seç.
+   - Yalnızca promptta açıkça eş, sevgili veya romantik ilişki belirtilmişse romantik dil kullan.
+4. KRİTİK HEDİYE NOTU KURALI: Eğer kullanıcı promptunda açıkça "doğum günü", "yaş günü" veya "yeni yaş" BELİRTİLMEDİYSE, kart notunda ("personalizedGiftNote") KESİNLİKLE "İyi ki doğdun", "Doğum günün kutlu olsun" veya "Yeni yaşın" YAZMA! Konseptsiz genel tebrikler verme.
+5. KRİTİK SEÇİM NEDENİ / AÇIKLAMA KURALI: aiExplanation alanında, seçtiğin ürünlerin neden tam da bu kişiye (örn: kız kardeş, yazılımcı dost, yeni anne) ve konseptine uygun olduğunu samimi, tatlı ve detaylıca açıkla. Mekanik veya jenerik yüzdeler YAZMA.
 6. Ürün veritabanındaki ID'leri seç. Fiyatların toplamı ${requestedBudget} TL bütçesine çok yakın olsun.
 7. Sevecen, sevimli, alıcıya/konsepte özgü Türkçe bir hediye kartı notu ("personalizedGiftNote") yaz.
 8. Kutuya konsepte ve kişiye özel sevimli bir isim ver ("boxTitle").
@@ -69,7 +72,7 @@ Kurallar:
 `;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.6-flash',
         contents: `Kullanıcı Promptu: "${prompt}" (Hedef Bütçe: ${requestedBudget} TL)`,
         config: {
           systemInstruction,
@@ -96,8 +99,8 @@ Kurallar:
       const jsonText = response.text ? response.text.trim() : '';
       if (jsonText) {
         const parsed = JSON.parse(jsonText);
-        // Hydrate items from PRODUCTS database
-        let matchedItems = PRODUCTS.filter((p) => parsed.matchedItemIds.includes(p.id));
+        const uniqueItemIds = Array.from(new Set(parsed.matchedItemIds || []));
+        let matchedItems = PRODUCTS.filter((p) => uniqueItemIds.includes(p.id));
         if (matchedItems.length === 0) matchedItems = PRODUCTS.slice(0, 4);
 
         // Optimize subset to match requestedBudget closely if needed

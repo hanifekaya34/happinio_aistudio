@@ -76,8 +76,12 @@ export function generateClientFallbackRecommendation(prompt: string, requestedBu
     doktor: ['doktor', 'hemşire', 'sağlık', 'tıp', 'hastane'],
     avukat: ['avukat', 'hukuk', 'savcı', 'hakim'],
     yeni_anne: ['yeni anne', 'lohusa', 'gebe', 'hamile', 'bebek', 'bebeği', 'yeni bebek', 'doğum yapan', 'anneye bebek', 'bebek hediyesi'],
+    kız_kardeş: ['kız kardeş', 'kızkardeş', 'kardeş', 'kardeşime', 'kardeşim', 'abla', 'ablam', 'ablama', 'bacım', 'kardeşcan', 'kardeş için'],
+    erkek_kardeş: ['erkek kardeş', 'abi', 'abim', 'abime', 'birader', 'erkek kardeşime'],
+    anne: ['anne', 'annem', 'anneme', 'valide'],
+    baba: ['baba', 'babam', 'babama', 'peder'],
     sevgili: ['sevgili', 'sevgilim', 'aşk', 'romantik', 'eşim', 'eşime', 'kocam', 'karım', 'yarim', 'sevgililer', 'hayat arkadaşım', 'partner'],
-    arkadaş: ['arkadaş', 'dost', 'kanka', 'kuzen', 'ortak', 'kardeş', 'kankama', 'arkadaşıma'],
+    arkadaş: ['arkadaş', 'dost', 'kanka', 'kuzen', 'ortak', 'kankama', 'arkadaşıma'],
   };
 
   // Interests & Themes dictionary
@@ -242,6 +246,10 @@ export function generateClientFallbackRecommendation(prompt: string, requestedBu
   const hasArchitect = detectedRoles.includes('mimar');
   const hasTeacher = detectedRoles.includes('öğretmen');
   const hasBabyMom = detectedRoles.includes('yeni_anne');
+  const hasSister = detectedRoles.includes('kız_kardeş');
+  const hasBrother = detectedRoles.includes('erkek_kardeş');
+  const hasMom = detectedRoles.includes('anne');
+  const hasDad = detectedRoles.includes('baba');
   const hasSpouse = detectedRoles.includes('sevgili');
   const hasFriend = detectedRoles.includes('arkadaş');
   const hasCat = detectedThemes.includes('kedi');
@@ -255,6 +263,30 @@ export function generateClientFallbackRecommendation(prompt: string, requestedBu
       boxTitle = `${ageStr} Minik Yeğenime Özel Sevimli Doğum Günü Kutusu 🧸🎈🎂`;
     } else {
       boxTitle = 'Minik Yeğenime Özel Sevimli Doğum Günü Kutusu 🧸🎈✨';
+    }
+  } else if (hasSister) {
+    if (hasBirthday) {
+      boxTitle = 'Canım Kız Kardeşime Özel Doğum Günü Kutusu 🌸🎂✨';
+    } else {
+      boxTitle = 'Canım Kız Kardeşime Özel Sürpriz Kutusu 🌸💖✨';
+    }
+  } else if (hasBrother) {
+    if (hasBirthday) {
+      boxTitle = 'Canım Kardeşime Özel Doğum Günü Kutusu 🚀🎂✨';
+    } else {
+      boxTitle = 'Canım Kardeşime Özel Sürpriz Kutusu 🚀✨';
+    }
+  } else if (hasMom) {
+    if (hasBirthday) {
+      boxTitle = 'Canım Anneme Özel Doğum Günü Kutusu 🌺🎂✨';
+    } else {
+      boxTitle = 'Canım Anneme Özel Sürpriz Kutusu 🌺✨';
+    }
+  } else if (hasDad) {
+    if (hasBirthday) {
+      boxTitle = 'Canım Babama Özel Doğum Günü Kutusu 👔🎂✨';
+    } else {
+      boxTitle = 'Canım Babama Özel Sürpriz Kutusu 👔✨';
     }
   } else if (hasGamer && hasSpouse && hasBirthday) {
     boxTitle = 'Oyuncu Eşime Özel Doğum Günü Kutusu 🎮💖🎂';
@@ -313,7 +345,31 @@ export function generateClientFallbackRecommendation(prompt: string, requestedBu
 
   // HYPER-PERSONALIZED DYNAMIC GIFT NOTE
   let personalizedGiftNote = '';
-  if (hasHumor) {
+  if (hasSister) {
+    if (hasBirthday) {
+      personalizedGiftNote = 'Canım kız kardeşim! Yeni yaşın sana sağlık, mutluluk, neşe ve tüm güzellikleri getirsin. Yüzündeki gülücük hiç eksik olmasın. İyi ki doğdun, iyi ki benim kardeşimsin! 🌸🎂💖';
+    } else {
+      personalizedGiftNote = 'Canım kız kardeşim! Hayatımda olduğun için çok şanslıyım. Yüzündeki gülücükler ve neşe hiç eksik olmasın. Seni çok seviyorum! 🌸💖✨';
+    }
+  } else if (hasBrother) {
+    if (hasBirthday) {
+      personalizedGiftNote = 'Canım kardeşim! Yeni yaşın sana sağlık, mutluluk ve sonsuz başarılar getirsin. İyi ki doğdun, iyi ki varsın! 🚀🎂✨';
+    } else {
+      personalizedGiftNote = 'Canım kardeşim! Her zaman yanında ve destekçinim. Yüzündeki neşe ve keyif hiç eksik olmasın! 🚀✨';
+    }
+  } else if (hasMom) {
+    if (hasBirthday) {
+      personalizedGiftNote = 'Canım annem! Varlığın hayatımın en büyük şansı. Yeni yaşın sağlık, huzur ve gülücüklerle dolsun. İyi ki doğdun, seni çok seviyorum! 🌺🎂💖';
+    } else {
+      personalizedGiftNote = 'Canım annem! Karşılıksız sevgin ve emeğin için çok teşekkür ederim. Hayatımın en değerli hazinesi sensin. Seni çok seviyorum! 🌺💖';
+    }
+  } else if (hasDad) {
+    if (hasBirthday) {
+      personalizedGiftNote = 'Canım babam! Her zaman arkamdaki en güçlü dağ olduğun için teşekkür ederim. Yeni yaşın sağlık ve huzurla geçsin. Doğum günün kutlu olsun! 👔🎂✨';
+    } else {
+      personalizedGiftNote = 'Canım babam! Varlığın bana her zaman güven ve güç veriyor. İyi ki varsın, seni çok seviyorum! 👔✨';
+    }
+  } else if (hasHumor) {
     if (hasBirthday) {
       personalizedGiftNote = '⚠️ DİKKAT: Bu kutu yüksek dozda kahkaha ve sürpriz içerir! 🎭 Yeni yaşın en az bu şaka kutusu kadar neşeli, sürprizlerle dolu ve bol kahkahalı geçsin. İyi ki doğdun! 🎉🎂';
     } else {
@@ -369,7 +425,15 @@ export function generateClientFallbackRecommendation(prompt: string, requestedBu
   const topItem2 = finalProducts[1]?.name || 'sürpriz hediyeler';
 
   let aiExplanation = '';
-  if (hasHumor) {
+  if (hasSister) {
+    aiExplanation = `Kız kardeşinin şıklığına, tarzına ve ona verdiğin değere özel olarak seçtiğimiz zarif ve lezzetli sürpriz parçaları ${totalPrice} TL bütçene tam oturacak şekilde hazırladık! 🌸💖`;
+  } else if (hasBrother) {
+    aiExplanation = `Kardeşinin ilgi alanlarına ve zevkine özel olarak seçtiğimiz kullanışlı ve neşeli parçaları ${totalPrice} TL bütçene tam oturacak şekilde seçtik! 🚀✨`;
+  } else if (hasMom) {
+    aiExplanation = `Canım annenin huzuruna, zevkine ve şıklığına yakışır en özel ve zarif hediyeleri ${totalPrice} TL bütçene mükemmel uyum sağlayacak şekilde bir araya getirdik! 🌺💖`;
+  } else if (hasDad) {
+    aiExplanation = `Babanın gününe keyif katacak kaliteli ve özenli parçaları ${totalPrice} TL bütçene tam oturacak şekilde seçtik! 👔✨`;
+  } else if (hasHumor) {
     aiExplanation = `Truva / şaka konseptinin neşeli ruhuna tam uyan esprili sürpriz parçaları ve lezzetli ikramları ${totalPrice} TL bütçene mükemmel oturacak şekilde kahkaha garantili olarak seçtik! 🎭🎁`;
   } else if (isChildOrNephew) {
     aiExplanation = `Minik yeğeninin neşeli dünyası için ona mutluluk katacak sevimli ve lezzetli sürpriz parçaları ${totalPrice} TL bütçene tam oturacak şekilde seçtik! 🧸🎈`;

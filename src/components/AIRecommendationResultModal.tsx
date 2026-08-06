@@ -52,6 +52,19 @@ interface AIRecommendationResultModalProps {
   isSaved?: boolean;
 }
 
+const dedupeProducts = (productList: Product[]): Product[] => {
+  if (!productList) return [];
+  const seen = new Set<string>();
+  const unique: Product[] = [];
+  for (const item of productList) {
+    if (item && item.id && !seen.has(item.id)) {
+      seen.add(item.id);
+      unique.push(item);
+    }
+  }
+  return unique;
+};
+
 export default function AIRecommendationResultModal({
   result,
   isOpen,
@@ -64,7 +77,7 @@ export default function AIRecommendationResultModal({
 }: AIRecommendationResultModalProps) {
   if (!isOpen || !result) return null;
 
-  const [items, setItems] = useState<Product[]>(result.matchedItems);
+  const [items, setItems] = useState<Product[]>(() => dedupeProducts(result.matchedItems));
   const [recipientName, setRecipientName] = useState('Sevgili Dostum');
   const [senderName, setSenderName] = useState('');
   const [giftNote, setGiftNote] = useState(result.personalizedGiftNote);
@@ -72,22 +85,30 @@ export default function AIRecommendationResultModal({
   // Sync state whenever result changes
   React.useEffect(() => {
     if (result) {
-      setItems(result.matchedItems);
+      setItems(dedupeProducts(result.matchedItems));
       setGiftNote(result.personalizedGiftNote);
 
       const titleLower = (result.boxTitle || '').toLowerCase();
-      if (titleLower.includes('yeğen') || titleLower.includes('yegen') || titleLower.includes('minik')) {
+      const noteLower = (result.personalizedGiftNote || '').toLowerCase();
+
+      if (titleLower.includes('kız kardeş') || titleLower.includes('kardeş') || titleLower.includes('abla') || noteLower.includes('kardeş') || noteLower.includes('abla')) {
+        setRecipientName(titleLower.includes('abla') || noteLower.includes('abla') ? 'Canım Ablam' : 'Canım Kız Kardeşim');
+      } else if (titleLower.includes('erkek kardeş') || titleLower.includes('abi') || noteLower.includes('abi')) {
+        setRecipientName('Canım Kardeşim');
+      } else if (titleLower.includes('yeğen') || titleLower.includes('yegen') || titleLower.includes('minik')) {
         setRecipientName('Canım Yeğenim');
-      } else if (titleLower.includes('eşim') || titleLower.includes('esim')) {
-        setRecipientName('Biricik Eşim');
-      } else if (titleLower.includes('anne')) {
+      } else if (titleLower.includes('eşim') || titleLower.includes('esim') || titleLower.includes('sevgili') || titleLower.includes('aşk') || noteLower.includes('eşim') || noteLower.includes('sevgilim') || noteLower.includes('aşkım')) {
+        setRecipientName('Biricik Eşim / Sevgilim');
+      } else if (titleLower.includes('anne') || noteLower.includes('annem')) {
         setRecipientName('Canım Annem');
-      } else if (titleLower.includes('öğretmen')) {
+      } else if (titleLower.includes('baba') || noteLower.includes('babam')) {
+        setRecipientName('Canım Babam');
+      } else if (titleLower.includes('öğretmen') || noteLower.includes('öğretmen')) {
         setRecipientName('Değerli Öğretmenim');
-      } else if (titleLower.includes('dost') || titleLower.includes('arkadaş')) {
+      } else if (titleLower.includes('dost') || titleLower.includes('arkadaş') || noteLower.includes('dost') || noteLower.includes('kanka')) {
         setRecipientName('Sevgili Dostum');
       } else {
-        setRecipientName('Sevgiliye / Özel Biri');
+        setRecipientName('Değerli Biri');
       }
     }
   }, [result]);
