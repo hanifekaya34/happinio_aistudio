@@ -50,14 +50,15 @@ export function generateClientFallbackRecommendation(prompt: string, requestedBu
 
   // Roles & Professions dictionary
   const roleKeywords: Record<string, string[]> = {
+    oyuncu: ['oyuncu', 'gamer', 'gaming', 'oyun', 'playstation', 'xbox', 'steam', 'twitch', 'oyun oynamayı', 'oyunculara', 'oyuncu eşime', 'oyuncu arkadaşıma'],
     yazılımcı: ['yazılımcı', 'kod', 'yazılım', 'mühendis', 'developer', 'coder', 'bilgisayar', 'programcı'],
     mimar: ['mimar', 'iç mimar', 'çizim', 'tasarım', 'sanatçı', 'ressam', 'estetik', 'eskiz', 'dizayn'],
     öğretmen: ['öğretmen', 'hocam', 'eğitmen', 'akademisyen', 'okul', 'ders'],
     doktor: ['doktor', 'hemşire', 'sağlık', 'tıp', 'hastane'],
     avukat: ['avukat', 'hukuk', 'savcı', 'hakim'],
-    yeni_anne: ['bebek', 'anne', 'yeni anne', 'doğum', 'lohusa', 'bebeği'],
-    sevgili: ['sevgili', 'sevgilim', 'aşk', 'romantik', 'eşim', 'kocam', 'karım', 'yarim', 'sevgililer'],
-    arkadaş: ['arkadaş', 'dost', 'kanka', 'kuzen', 'ortak', 'kardeş'],
+    yeni_anne: ['yeni anne', 'lohusa', 'gebe', 'hamile', 'bebek', 'bebeği', 'yeni bebek', 'doğum yapan', 'anneye bebek', 'bebek hediyesi'],
+    sevgili: ['sevgili', 'sevgilim', 'aşk', 'romantik', 'eşim', 'eşime', 'kocam', 'karım', 'yarim', 'sevgililer', 'hayat arkadaşım', 'partner'],
+    arkadaş: ['arkadaş', 'dost', 'kanka', 'kuzen', 'ortak', 'kardeş', 'kankama', 'arkadaşıma'],
   };
 
   // Interests & Themes dictionary
@@ -69,9 +70,9 @@ export function generateClientFallbackRecommendation(prompt: string, requestedBu
     kitap: ['kitap', 'okuma', 'klasik', 'defter', 'ajanda', 'planlayıcı', 'yazı'],
     cikolata: ['çikolata', 'tatlı', 'trüf', 'lokum', 'fındık', 'atıştırmalık', 'gurme', 'lezzet'],
     dinlenme: ['mum', 'soya', 'lavanta', 'spa', 'sakin', 'huzur', 'relax', 'bitki çayı', 'dinlenme'],
-    fantastik: ['fantastik', 'harry potter', 'sinema', 'dizi', 'film', 'star wars', 'oyun'],
-    kurumsal: ['iş', 'terfi', 'ofis', 'kariyer', 'onboarding', 'yeni iş', 'termos', 'kalem'],
-    dogum_gunu: ['doğum günü', 'dogum gunu', 'yaş', 'yaş günü', 'kutlama', 'pasta', 'hediye'],
+    fantastik: ['fantastik', 'harry potter', 'sinema', 'dizi', 'film', 'star wars'],
+    kurumsal: ['terfi', 'ofis', 'kariyer', 'onboarding', 'yeni iş', 'termos', 'kalem'],
+    dogum_gunu: ['doğum günü', 'dogum gunu', 'doğumgünü', 'yaş günü', 'yaşında', 'yeni yaş', 'doğum gününü'],
   };
 
   // Detect matching roles and themes from prompt
@@ -115,11 +116,12 @@ export function generateClientFallbackRecommendation(prompt: string, requestedBu
 
     // Role scores
     detectedRoles.forEach((role) => {
+      if (role === 'oyuncu' && (product.boxTypes.includes('fantasy') || product.boxTypes.includes('meme') || product.boxTypes.includes('truva') || product.tags.includes('fantastik') || product.tags.includes('kupa') || product.tags.includes('kahve') || product.tags.includes('komik') || product.tags.includes('çikolata'))) score += 25;
       if (role === 'yazılımcı' && (product.tags.includes('kahve') || product.tags.includes('komik') || product.tags.includes('motto') || product.tags.includes('defter') || product.tags.includes('sticker'))) score += 18;
       if (role === 'mimar' && (product.tags.includes('seramik') || product.tags.includes('defter') || product.tags.includes('mum') || product.tags.includes('eskişehir'))) score += 18;
       if (role === 'öğretmen' && (product.tags.includes('defter') || product.tags.includes('kalem') || product.tags.includes('kupa') || product.tags.includes('çay'))) score += 18;
-      if (role === 'yeni_anne' && (product.boxTypes.includes('baby_mom') || product.tags.includes('bebek') || product.tags.includes('yeni anne'))) score += 30;
-      if (role === 'sevgili' && (product.tags.includes('çikolata') || product.tags.includes('mum') || product.tags.includes('romantik') || product.tags.includes('kupa'))) score += 18;
+      if (role === 'yeni_anne' && (product.boxTypes.includes('baby_mom') || product.tags.includes('bebek') || product.tags.includes('yeni anne'))) score += 35;
+      if (role === 'sevgili' && (product.tags.includes('çikolata') || product.tags.includes('mum') || product.tags.includes('romantik') || product.tags.includes('kupa'))) score += 20;
     });
 
     return { product, score };
@@ -163,32 +165,60 @@ export function generateClientFallbackRecommendation(prompt: string, requestedBu
   const totalPrice = finalProducts.reduce((sum, p) => sum + p.price, 0);
 
   // HYPER-PERSONALIZED DYNAMIC BOX TITLE
+  const hasGamer = detectedRoles.includes('oyuncu');
+  const hasDev = detectedRoles.includes('yazılımcı');
+  const hasArchitect = detectedRoles.includes('mimar');
+  const hasTeacher = detectedRoles.includes('öğretmen');
+  const hasBabyMom = detectedRoles.includes('yeni_anne');
+  const hasSpouse = detectedRoles.includes('sevgili');
+  const hasFriend = detectedRoles.includes('arkadaş');
+  const hasCat = detectedThemes.includes('kedi');
+  const hasBirthday = detectedThemes.includes('dogum_gunu');
+  const hasEskisehir = detectedThemes.includes('eskişehir');
+  const hasHumor = detectedThemes.includes('mizah');
+
   let boxTitle = '';
-  if (detectedRoles.includes('yazılımcı')) {
+  if (hasGamer && hasSpouse && hasBirthday) {
+    boxTitle = 'Oyuncu Eşime Özel Doğum Günü Kutusu 🎮💖🎂';
+  } else if (hasGamer && hasSpouse) {
+    boxTitle = 'Oyuncu Eşime Özel Aşk & Oyun Keyfi Kutusu 🎮💖';
+  } else if (hasGamer && hasBirthday) {
+    boxTitle = 'Oyuncu Dostuma Özel Doğum Günü Kutusu 🎮🎂';
+  } else if (hasGamer) {
+    boxTitle = 'Oyuncu & Gaming Tutkunu Özel Sürpriz Kutusu 🎮☕';
+  } else if (hasDev && hasSpouse && hasBirthday) {
+    boxTitle = 'Yazılımcı Eşime Özel Doğum Günü & Kahve Kutusu 💻💖🎂';
+  } else if (hasDev && hasSpouse) {
+    boxTitle = 'Yazılımcı Eşime Özel Kod & Kahve Kutusu 💻💖';
+  } else if (hasDev && hasBirthday) {
+    boxTitle = 'Yazılımcıya Özel Doğum Günü & Kahve Kutusu 💻🎂';
+  } else if (hasDev) {
     boxTitle = 'Kod & Kahve Tutkunu Yazılımcı Özel Kutusu 💻☕';
-  } else if (detectedRoles.includes('mimar')) {
+  } else if (hasArchitect && hasSpouse) {
+    boxTitle = 'Mimar Eşime Özel Estetik Sürpriz Kutusu 📐💖';
+  } else if (hasArchitect) {
     boxTitle = 'Estetik & Çizim Aşığı Mimar Özel Sürpriz Kutusu 📐✨';
-  } else if (detectedRoles.includes('öğretmen')) {
+  } else if (hasTeacher) {
     boxTitle = 'İlham Veren Öğretmen Özel Teşekkür Kutusu 📚☕';
-  } else if (detectedRoles.includes('yeni_anne')) {
+  } else if (hasBabyMom) {
     boxTitle = 'Yeni Anne & Minik Mucize Huzur Kutusu 👶🌸';
-  } else if (detectedThemes.includes('kedi')) {
+  } else if (hasCat && hasSpouse) {
+    boxTitle = 'Kedisever Eşime Özel Sıcacık Sürpriz Kutusu 🐱💖';
+  } else if (hasCat) {
     boxTitle = 'Mırıldayan Patiler & Neşeli Kahve Kutusu 🐱☕';
-  } else if (detectedThemes.includes('eskişehir')) {
+  } else if (hasEskisehir) {
     boxTitle = "Eskişehir'in Sanatçı Ruhu & El Emeği Zanaat Kutusu 🎨";
-  } else if (detectedThemes.includes('mizah')) {
+  } else if (hasHumor) {
     boxTitle = 'Kahkaha Garantili Mizah & Truva Sürpriz Kutusu 🎭🎁';
-  } else if (detectedRoles.includes('sevgili')) {
+  } else if (hasSpouse && hasBirthday) {
+    boxTitle = 'Biricik Eşime Özel Doğum Günü & Aşk Kutusu 🎂💖';
+  } else if (hasSpouse) {
     boxTitle = 'Kalpten Gelen Sıcacık Aşk & Lezzet Kutusu 💖🍫';
-  } else if (detectedThemes.includes('kurumsal')) {
-    boxTitle = 'Kariyer Yolculuğu & Yeni İş Tebrik Kutusu 💼🚀';
-  } else if (detectedThemes.includes('dogum_gunu')) {
+  } else if (hasBirthday) {
     boxTitle = 'İyi Ki Doğdun! Renk Renk Doğum Günü Kutusu 🎂✨';
-  } else if (detectedThemes.includes('fantastik')) {
-    boxTitle = 'Büyülü Evrenler & Fantastik Sinema Kutusu 🪄🌌';
   } else {
     // Generate dynamically from extracted prompt keywords
-    const stopWords = ['için', 'içinde', 'olan', 'gibi', 'veya', 'böyle', 'biri', 'hediye', 'kutusu', 'istiyorum', 'almak', 'yapmak', 'bir', 'çok', 'arkadaşıma', 'sevgilime'];
+    const stopWords = ['için', 'içinde', 'olan', 'gibi', 'veya', 'böyle', 'biri', 'hediye', 'kutusu', 'istiyorum', 'almak', 'yapmak', 'bir', 'çok', 'arkadaşıma', 'sevgilime', 'eşime'];
     const keyWords = prompt
       .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, '')
       .split(/\s+/)
@@ -205,30 +235,47 @@ export function generateClientFallbackRecommendation(prompt: string, requestedBu
 
   // HYPER-PERSONALIZED DYNAMIC GIFT NOTE
   let personalizedGiftNote = '';
-  if (detectedRoles.includes('yazılımcı')) {
-    personalizedGiftNote = 'Kodların hatasız derlensin, kahven hiç soğumasın! Yeni yaşında tüm projelerin ve hayallerin tıkır tıkır işlesin! 🚀☕';
-  } else if (detectedRoles.includes('mimar')) {
+  if (hasGamer && hasSpouse && hasBirthday) {
+    personalizedGiftNote = 'Hayatıma renk katan en tatlı oyun arkadaşım, biricik eşim... Doğum günün kutlu olsun! Yeni yaşında ve tüm oyun bölümlerinde el ele en yüksek skorları yapacağımız harika bir yıl dilerim! 🎮💖🎂';
+  } else if (hasGamer && hasSpouse) {
+    personalizedGiftNote = 'Hayatıma neşe katan en tatlı oyun arkadaşım... İyi ki varsın! Birlikte en keyifli skorları imzalayacağımız harika günlerimiz olsun. 🎮💖';
+  } else if (hasGamer && hasBirthday) {
+    personalizedGiftNote = 'Yeni yaşın kutlu olsun! Tüm oyunlarda en yüksek skorlar, kesintisiz ping ve bol galibiyetler seninle olsun! 🎮🎂';
+  } else if (hasGamer) {
+    personalizedGiftNote = 'Oyun keyfin hiç bitmesin, kahven hep sıcak kalsın! Keyifli ve neşeli oyun saatleri dilerim. 🎮☕';
+  } else if (hasDev && hasBirthday) {
+    personalizedGiftNote = 'Kodların hatasız derlensin, kahven hiç soğumasın! Yeni yaşında tüm projelerin ve hayallerin tıkır tıkır işlesin! 🚀☕🎂';
+  } else if (hasDev) {
+    personalizedGiftNote = 'Kodların hatasız derlensin, kahven hiç soğumasın! Tüm projelerinde sonsuz başarılar dilerim! 🚀☕';
+  } else if (hasArchitect) {
     personalizedGiftNote = 'Hayatıma ve çevrene kattığın o muazzam estetik için sonsuz teşekkürler. Tasarladığın tüm güzel yarınlar seninle olsun! 📐✨';
-  } else if (detectedRoles.includes('öğretmen')) {
+  } else if (hasTeacher) {
     personalizedGiftNote = 'Geleceğe kattığınız ışık ve verdiğiniz emekler için sonsuz teşekkürler. Gününüz kutlu, kahveniz hep taze olsun! 📚✨';
-  } else if (detectedRoles.includes('yeni_anne')) {
+  } else if (hasBabyMom) {
     personalizedGiftNote = 'Bebeğinle birlikte huzur, sağlık ve kahkahalarla dolu muazzam bir ömür dilerim. İyi ki varsın! 👶💖';
-  } else if (detectedThemes.includes('kedi')) {
+  } else if (hasCat) {
     personalizedGiftNote = 'En tatlı pati dostun ve sıcacık kahven eşliğinde huzur dolu anlar seninle olsun! Paticiklerle dolu harika bir gün dilerim. 🐾☕';
-  } else if (detectedRoles.includes('sevgili')) {
+  } else if (hasSpouse && hasBirthday) {
+    personalizedGiftNote = 'Gülüşüyle dünyamı aydınlatan biricik eşim... Doğum günün kutlu olsun! Seninle geçen her an benim için en büyük hediye. Seni çok seviyorum! 💖🎂';
+  } else if (hasSpouse) {
     personalizedGiftNote = 'Gülüşünle dünyamı güzelleştiren insan... İyi ki varsın, seninle geçecek her an en büyük hediye. Seni çok seviyorum! 💖✨';
-  } else if (detectedThemes.includes('dogum_gunu')) {
+  } else if (hasBirthday) {
     personalizedGiftNote = 'Senin gibi harika bir insanın varlığı en büyük armağan! Yeni yaşın sağlık, neşe ve bu kutudaki gibi tatlı sürprizlerle dolsun. İyi ki doğdun! 🎉🎂';
   } else {
     personalizedGiftNote = 'Senin için özenle hazırlanan bu kutudaki her bir parçanın yüzünde kocaman bir tebessüm oluşturması dileğiyle! Birlikte biriktireceğimiz nice mutlu anlara. ✨';
   }
 
   // HYPER-PERSONALIZED DYNAMIC AI EXPLANATION
-  const promptSnippet = prompt.length > 45 ? prompt.substring(0, 45) + '...' : prompt;
+  const promptSnippet = prompt.length > 40 ? prompt.substring(0, 40) + '...' : prompt;
   const topItem1 = finalProducts[0]?.name || 'özel parçalar';
   const topItem2 = finalProducts[1]?.name || 'sürpriz hediyeler';
 
-  const aiExplanation = `Yazdığın "${promptSnippet}" detaylarını Joy Genie olarak büyük bir heyecanla analiz ettik! Belirttiğin ilgi alanlarına tam uyan ${topItem1} ve ${topItem2} parçalarını ${totalPrice} TL bütçene mükemmel oturacak şekilde seçtik.`;
+  let aiExplanation = '';
+  if (hasGamer && hasSpouse) {
+    aiExplanation = `Eşinin oyun tutkusunu ve verdiğin değeri göz önüne alarak; oyun saatlerinde keyifle eşlik edecek ${topItem1} ve ${topItem2} gibi neşeli parçaları ${totalPrice} TL bütçene mükemmel oturacak şekilde seçtik!`;
+  } else {
+    aiExplanation = `Yazdığın "${promptSnippet}" detaylarını Joy Genie olarak büyük bir heyecanla analiz ettik! Belirttiğin ilgi alanlarına tam uyan ${topItem1} ve ${topItem2} parçalarını ${totalPrice} TL bütçene mükemmel oturacak şekilde seçtik.`;
+  }
 
   return {
     boxTitle,
