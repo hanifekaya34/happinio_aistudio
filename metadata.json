@@ -1,0 +1,8 @@
+{
+  "name": "Happinio - Kişiselleştirilmiş Hediye & Sürpriz Atölyesi",
+  "description": "Samimi ve özenle hazırlanan kişiye özel hediye kutuları, akıllı Joy-Genie önerileri, şehir zanaatkar ürünleri ve aylık sürpriz kulübü.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
