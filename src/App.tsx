@@ -215,6 +215,10 @@ export default function App() {
         body: JSON.stringify({ prompt: promptText, targetBudget: budget || 1000 }),
       });
 
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
       setIsAiLoading(false);
 
@@ -234,8 +238,8 @@ export default function App() {
       setIsAiLoading(false);
       alert(
         lang === 'tr'
-          ? 'Yapay zeka sunucusu ile bağlantı kurulamadı.'
-          : 'Could not connect to AI recommendation server.'
+          ? 'Yapay zeka sunucusu ile bağlantı kurulamadı. Lütfen internet bağlantınızı veya API servisini kontrol edin.'
+          : 'Could not connect to AI recommendation server. Please check your connection or API service.'
       );
     }
   };

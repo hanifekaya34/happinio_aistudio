@@ -65,7 +65,7 @@ export default function AIRecommendationResultModal({
   if (!isOpen || !result) return null;
 
   const [items, setItems] = useState<Product[]>(result.matchedItems);
-  const [recipientName, setRecipientName] = useState('Sevgili Dostum');
+  const [recipientName, setRecipientName] = useState(result.recipientName || 'Sevgili Dostum');
   const [senderName, setSenderName] = useState('');
   const [giftNote, setGiftNote] = useState(result.personalizedGiftNote);
   const [isEditingNote, setIsEditingNote] = useState(false);
@@ -75,6 +75,15 @@ export default function AIRecommendationResultModal({
   const [copiedLink, setCopiedLink] = useState(false);
   const [activeAlternativeId, setActiveAlternativeId] = useState<number | null>(null);
   const [showMobileDetail, setShowMobileDetail] = useState(false);
+
+  // Synchronize component state when a new result prop is received
+  React.useEffect(() => {
+    if (result) {
+      setItems(result.matchedItems);
+      setRecipientName(result.recipientName || 'Sevgili Dostum');
+      setGiftNote(result.personalizedGiftNote);
+    }
+  }, [result]);
 
   // Reset active alternative detail when swapTargetItem changes
   React.useEffect(() => {

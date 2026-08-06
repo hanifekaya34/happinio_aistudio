@@ -74,6 +74,7 @@ export interface AIRecommendationResponse {
   personalizedGiftNote: string;
   suggestedBoxCategory: BoxCategory;
   aiExplanation: string;
+  recipientName?: string;
 }
 
 export interface Order {

@@ -25,6 +25,20 @@ const getGeminiClient = () => {
   });
 };
 
+// Helper to extract recipient relationship from prompt if not specified
+function extractRecipientFromPrompt(prompt: string): string {
+  const lower = prompt.toLowerCase();
+  if (lower.includes('kuzen')) return 'Sevgili Kuzenim';
+  if (lower.includes('sevgili') || lower.includes('eşim') || lower.includes('eşime') || lower.includes('partner')) return 'Sevgilim';
+  if (lower.includes('anne') || lower.includes('annem')) return 'Canım Annem';
+  if (lower.includes('baba') || lower.includes('babam')) return 'Canım Babam';
+  if (lower.includes('kardeş') || lower.includes('kardeşim') || lower.includes('abla') || lower.includes('abim')) return 'Canım Kardeşim';
+  if (lower.includes('arkadaş') || lower.includes('arkadaşım') || lower.includes('dost')) return 'Yakın Arkadaşım';
+  if (lower.includes('meslektaş') || lower.includes('iş arkadaş')) return 'Değerli İş Arkadaşım';
+  if (lower.includes('kendim') || lower.includes('bana')) return 'Kendime Özel';
+  return 'Sevgili Dostum';
+}
+
 // API Endpoint 1: AI Prompt-To-Cart Gift Recommendation Engine
 app.post('/api/ai-gift-recommendation', async (req, res) => {
   try {
@@ -58,11 +72,13 @@ Seçeceğin 3-5 ürünün TOPLAM FİYATI, belirlenen bu ${requestedBudget} TL b�
 Kurallar:
 1. Kullanıcının belirttiği ilgi alanları (kedi, kahve, kitap, bebek, şehir, şaka/truva, kurumsal, vb.), amaç ve duygusal tonu analiz et.
 2. Ürün veritabanındaki ID'leri (ör. PRD-001, PRD-004) seç. Seçtiğin ürünlerin ID'lerinin fiyatlarının toplamı ${requestedBudget} TL bütçesine çok yakın olsun.
-3. Sevecen, sevimli ve kişiye özel Türkçe bir hediye kartı notu ("personalizedGiftNote") kaleme al.
+3. Sevecen, sevimli ve kişiye özel Türkçe bir hediye kartı notu ("personalizedGiftNote") kaleme al. 
+CRITICAL HITAP KURALI: Kullanıcının hediye alacağı kişi promptta "kuzenim", "annem", "sevgilim", "iş arkadaşım", "kardeşim" vb. olarak belirtilmişse, hediye kartı notunun başlangıç hitabını KESİNLİKLE o ilişkiye özel seç (örneğin "kuzenim" yazıldıysa nota "Sevgili Kuzenim," veya "Canım Kuzenim," diyerek başla; SAKIN "Sevgili Dostum" YAZMA)!
 4. Kutuya sevimli ve özel bir isim ver ("boxTitle").
 5. Neden bu ürünleri seçtiğini açıklayan tatlı, samimi ve duygusal bir Hapy açıklaması yaz ("aiExplanation").
 ÖNEMLİ KURAL: Asla "%97.5", "%100" gibi yüzde oranları, matematiksel bütçe uyum yüzdeleri veya "Toplam tutar 1560 TL ile 1600 TL bütçenize %97.5 oranında tam uyum sağlamaktadır" gibi mekanik yüzde ve bütçe hesap cümleleri YAZMA! Yüzde veya oran cümleleri yazmak KESİNLİKLE YASAKTIR. Açıklamada sadece hediye konseptinin güzelliğine, ürünlerin birbiriyle estetik uyumuna ve sevdiklerine yaşatacağı neşeye odaklan.
-6. Yanıtını STRICT JSON formatında ver.
+6. Kullanıcının hediye alacağı kişinin ilişkisini/hitabını tespit et ve "recipientName" alanına yaz (örneğin "Sevgili Kuzenim", "Canım Annem", "Yakın Arkadaşım", "Sevgilim" vb.).
+7. Yanıtını STRICT JSON formatında ver.
 `;
 
       const response = await ai.models.generateContent({
@@ -84,8 +100,9 @@ Kurallar:
               matchScore: { type: Type.INTEGER },
               suggestedBoxCategory: { type: Type.STRING },
               aiExplanation: { type: Type.STRING },
+              recipientName: { type: Type.STRING },
             },
-            required: ['boxTitle', 'tagline', 'matchedItemIds', 'personalizedGiftNote', 'matchScore', 'suggestedBoxCategory', 'aiExplanation'],
+            required: ['boxTitle', 'tagline', 'matchedItemIds', 'personalizedGiftNote', 'matchScore', 'suggestedBoxCategory', 'aiExplanation', 'recipientName'],
           },
         },
       });
@@ -100,6 +117,8 @@ Kurallar:
         // Optimize subset to match requestedBudget closely if needed
         let totalPrice = matchedItems.reduce((acc, curr) => acc + curr.price, 0);
 
+        const recipientName = parsed.recipientName || extractRecipientFromPrompt(prompt);
+
         return res.json({
           boxTitle: parsed.boxTitle || 'Sana Özel Happinio Kutusu',
           tagline: parsed.tagline || 'Sana Özel Zevklerle Tasarlandı',
@@ -109,6 +128,7 @@ Kurallar:
           personalizedGiftNote: parsed.personalizedGiftNote || 'Sevgi dolu anlar biriktirmeniz dileğiyle!',
           suggestedBoxCategory: parsed.suggestedBoxCategory || 'coffee_book',
           aiExplanation: parsed.aiExplanation || 'İsteğindeki detayları inceleyip seçtiğin bütçeye en yakın uyumlu parçaları bir araya getirdik!',
+          recipientName,
         });
       }
     }
@@ -164,6 +184,7 @@ Kurallar:
 
     const finalProducts = bestProducts;
     const totalPrice = finalProducts.reduce((sum, item) => sum + item.price, 0);
+    const recipientName = extractRecipientFromPrompt(prompt);
 
     return res.json({
       boxTitle: lowerPrompt.includes('eskişehir') ? "Eskişehir'in Sanatçı Ruhu & Oyun Keyfi Kutusu" : 'Kişiye Özel Happinio Sürprizi',
@@ -172,10 +193,11 @@ Kurallar:
       totalPrice,
       matchScore: 97,
       personalizedGiftNote: lowerPrompt.includes('eskişehir')
-        ? 'Kahve kokusu, Eskişehir dokusu ve eğlenceli oyun saatleri bir arada! Yüzünden tebessüm hiç eksik olmasın.'
-        : `İyi ki doğdun! Senin kadar tatlı ve özel sürprizlerle dolu günler dilerim.`,
+        ? `${recipientName}, kahve kokusu, Eskişehir dokusu ve eğlenceli oyun saatleri bir arada! Yüzünden tebessüm hiç eksik olmasın.`
+        : `${recipientName}, iyi ki doğdun! Senin kadar tatlı ve özel sürprizlerle dolu günler dilerim.`,
       suggestedBoxCategory: 'custom',
       aiExplanation: `İstediğin konsept ve ilgi alanlarına tam uyum sağlayan, sevdiklerini mutlu edecek en özel parçaları bir araya getirdik!`,
+      recipientName,
     });
   } catch (error) {
     console.error('AI Recommendation Error:', error);
@@ -255,7 +277,9 @@ app.post('/api/checkout', (req, res) => {
   });
 });
 
-// Start Express Server
+export default app;
+
+// Start Express Server (only when not running on Vercel Serverless environment)
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
@@ -276,4 +300,7 @@ async function startServer() {
   });
 }
 
-startServer();
+if (!process.env.VERCEL) {
+  startServer();
+}
+
