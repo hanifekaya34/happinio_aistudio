@@ -116,13 +116,20 @@ export function generateClientFallbackRecommendation(prompt: string, requestedBu
 
     // Role scores
     detectedRoles.forEach((role) => {
-      if (role === 'oyuncu' && (product.boxTypes.includes('fantasy') || product.boxTypes.includes('meme') || product.boxTypes.includes('truva') || product.tags.includes('fantastik') || product.tags.includes('kupa') || product.tags.includes('kahve') || product.tags.includes('komik') || product.tags.includes('çikolata'))) score += 25;
-      if (role === 'yazılımcı' && (product.tags.includes('kahve') || product.tags.includes('komik') || product.tags.includes('motto') || product.tags.includes('defter') || product.tags.includes('sticker'))) score += 18;
-      if (role === 'mimar' && (product.tags.includes('seramik') || product.tags.includes('defter') || product.tags.includes('mum') || product.tags.includes('eskişehir'))) score += 18;
-      if (role === 'öğretmen' && (product.tags.includes('defter') || product.tags.includes('kalem') || product.tags.includes('kupa') || product.tags.includes('çay'))) score += 18;
-      if (role === 'yeni_anne' && (product.boxTypes.includes('baby_mom') || product.tags.includes('bebek') || product.tags.includes('yeni anne'))) score += 35;
-      if (role === 'sevgili' && (product.tags.includes('çikolata') || product.tags.includes('mum') || product.tags.includes('romantik') || product.tags.includes('kupa'))) score += 20;
+      if (role === 'oyuncu' && (product.boxTypes.includes('fantasy') || product.boxTypes.includes('meme') || product.boxTypes.includes('truva') || product.tags.includes('fantastik') || product.tags.includes('kupa') || product.tags.includes('kahve') || product.tags.includes('komik') || product.tags.includes('çikolata'))) score += 35;
+      if (role === 'yazılımcı' && (product.tags.includes('kahve') || product.tags.includes('komik') || product.tags.includes('motto') || product.tags.includes('defter') || product.tags.includes('sticker'))) score += 25;
+      if (role === 'mimar' && (product.tags.includes('seramik') || product.tags.includes('defter') || product.tags.includes('mum') || product.tags.includes('eskişehir'))) score += 25;
+      if (role === 'öğretmen' && (product.tags.includes('defter') || product.tags.includes('kalem') || product.tags.includes('kupa') || product.tags.includes('çay'))) score += 25;
+      if (role === 'yeni_anne' && (product.boxTypes.includes('baby_mom') || product.tags.includes('bebek') || product.tags.includes('yeni anne'))) score += 50;
+      if (role === 'sevgili' && (product.tags.includes('çikolata') || product.tags.includes('mum') || product.tags.includes('romantik') || product.tags.includes('kupa'))) score += 25;
     });
+
+    // Penalize baby/mom products if NOT requested in prompt
+    const isBabyProduct = product.boxTypes.includes('baby_mom') || product.tags.includes('bebek') || product.tags.includes('yeni anne') || nameLower.includes('bebek');
+    const userRequestedBaby = detectedRoles.includes('yeni_anne') || lowerPrompt.includes('bebek') || lowerPrompt.includes('anne');
+    if (isBabyProduct && !userRequestedBaby) {
+      score -= 300; // Heavily penalize baby items if user didn't ask for baby
+    }
 
     return { product, score };
   });
@@ -130,10 +137,10 @@ export function generateClientFallbackRecommendation(prompt: string, requestedBu
   // Sort descending by relevance score
   scoredProducts.sort((a, b) => b.score - a.score);
 
-  // Take top scored products
-  let candidatePool = scoredProducts.filter((sp) => sp.score > 0).map((sp) => sp.product);
+  // Take top scored products (excluding heavily penalized items)
+  let candidatePool = scoredProducts.filter((sp) => sp.score > -100).map((sp) => sp.product);
   if (candidatePool.length < 3) {
-    candidatePool = PRODUCTS.slice(0, 8);
+    candidatePool = PRODUCTS.filter((p) => !p.boxTypes.includes('baby_mom') && !p.tags.includes('bebek'));
   }
 
   // Optimize subset of 3 or 4 products closest to budget
