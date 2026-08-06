@@ -15,13 +15,19 @@ export interface AIRecommendationResult {
 export async function generateAIGiftBox(promptText: string, budget?: number): Promise<AIRecommendationResult> {
   const targetBudget = budget && budget > 0 ? budget : 1000;
 
-  // 1. Try server API first
+  // 1. Try server API first with a strict 4-second network timeout
   try {
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timeoutId = controller ? setTimeout(() => controller.abort(), 4000) : null;
+
     const response = await fetch('/api/ai-gift-recommendation', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt: promptText, targetBudget }),
+      signal: controller ? controller.signal : undefined,
     });
+
+    if (timeoutId) clearTimeout(timeoutId);
 
     if (response.ok) {
       const data = await response.json();
@@ -30,10 +36,10 @@ export async function generateAIGiftBox(promptText: string, budget?: number): Pr
       }
     }
   } catch (err) {
-    console.warn('Server API call failed or unavailable, using client-side AI matching algorithm:', err);
+    console.warn('Server API call failed or timed out, using instant client-side AI matching algorithm:', err);
   }
 
-  // 2. Client-side Smart AI Matching Algorithm (Fallback for Vercel / Static Hosting)
+  // 2. Client-side Smart AI Matching Algorithm (Instant Fallback for Vercel / Mobile / Offline)
   return generateClientFallbackRecommendation(promptText, targetBudget);
 }
 
@@ -78,14 +84,14 @@ export function generateClientFallbackRecommendation(prompt: string, requestedBu
   const themeKeywords: Record<string, string[]> = {
     kahve: ['kahve', 'espresso', 'filtre', 'arabica', 'latte', 'kupa', 'mug', 'bardak'],
     kedi: ['kedi', 'kedicik', 'pati', 'mırıl', 'cat'],
-    mizah: ['şaka', 'saka', 'troll', 'truva', 'komik', 'esprili', 'motto', 'replik', 'meme'],
+    mizah: ['şaka', 'saka', 'troll', 'truva', 'komik', 'esprili', 'motto', 'replik', 'meme', 'mizah'],
     eskişehir: ['eskişehir', 'odunpazarı', 'sanat', 'yerel'],
     kitap: ['kitap', 'okuma', 'klasik', 'defter', 'ajanda', 'planlayıcı', 'yazı'],
     cikolata: ['çikolata', 'tatlı', 'trüf', 'lokum', 'fındık', 'atıştırmalık', 'gurme', 'lezzet'],
     dinlenme: ['mum', 'soya', 'lavanta', 'spa', 'sakin', 'huzur', 'relax', 'bitki çayı', 'dinlenme'],
     fantastik: ['fantastik', 'harry potter', 'sinema', 'dizi', 'film', 'star wars'],
     kurumsal: ['terfi', 'ofis', 'kariyer', 'onboarding', 'yeni iş', 'termos', 'kalem'],
-    dogum_gunu: ['doğum günü', 'dogum gunu', 'doğumgünü', 'yaş günü', 'yaşında', 'yeni yaş', 'doğum gününü'],
+    dogum_gunu: ['doğum günü', 'dogum gunu', 'doğumgünü', 'yaş günü', 'yeni yaş', 'doğum gününü', 'doğum günü hediyesi'],
   };
 
   // Detect matching roles and themes from prompt
@@ -225,7 +231,9 @@ export function generateClientFallbackRecommendation(prompt: string, requestedBu
     }
   }
 
-  const finalProducts = bestSubset;
+  const uniqueProductsMap = new Map<string, Product>();
+  bestSubset.forEach((p) => uniqueProductsMap.set(p.id, p));
+  const finalProducts = Array.from(uniqueProductsMap.values());
   const totalPrice = finalProducts.reduce((sum, p) => sum + p.price, 0);
 
   // HYPER-PERSONALIZED DYNAMIC BOX TITLE
@@ -305,20 +313,36 @@ export function generateClientFallbackRecommendation(prompt: string, requestedBu
 
   // HYPER-PERSONALIZED DYNAMIC GIFT NOTE
   let personalizedGiftNote = '';
-  if (isChildOrNephew) {
-    personalizedGiftNote = `Canım minik yeğenim! Yeni yaşın sağlık, neşe, oyunlar ve rengarenk kahkahalarla dolsun! Seni çooook seven ailen... İyi ki doğdun minik mucize! 🎈🧸✨`;
-  } else if (hasGamer && hasSpouse && hasBirthday) {
-    personalizedGiftNote = 'Hayatıma renk katan en tatlı oyun arkadaşım, biricik eşim... Doğum günün kutlu olsun! Yeni yaşında ve tüm oyun bölümlerinde el ele en yüksek skorları yapacağımız harika bir yıl dilerim! 🎮💖🎂';
+  if (hasHumor) {
+    if (hasBirthday) {
+      personalizedGiftNote = '⚠️ DİKKAT: Bu kutu yüksek dozda kahkaha ve sürpriz içerir! 🎭 Yeni yaşın en az bu şaka kutusu kadar neşeli, sürprizlerle dolu ve bol kahkahalı geçsin. İyi ki doğdun! 🎉🎂';
+    } else {
+      personalizedGiftNote = '⚠️ DİKKAT: Bu kutu yüksek dozda kahkaha, tatlı bir şaşkınlık ve eğlence içerir! 🎭 Kutuyu açarken yüzündeki o şaşkın tebessümü görmek için sabırsızlanıyorum. Hayat senin esprilerinle çok daha güzel! 🎉';
+    }
+  } else if (isChildOrNephew) {
+    if (hasBirthday) {
+      personalizedGiftNote = `Canım minik yeğenim! Yeni yaşın sağlık, neşe, oyunlar ve rengarenk kahkahalarla dolsun! Seni çooook seven ailen... İyi ki doğdun minik mucize! 🎈🧸✨`;
+    } else {
+      personalizedGiftNote = `Canım minik yeğenim! Yüzündeki o sevimli gülücükler ve neşe hiç eksik olmasın. Seni çooook seven ailen... Sevgi ve kucak dolusu sarılmalarla! 🎈🧸✨`;
+    }
   } else if (hasGamer && hasSpouse) {
-    personalizedGiftNote = 'Hayatıma neşe katan en tatlı oyun arkadaşım... İyi ki varsın! Birlikte en keyifli skorları imzalayacağımız harika günlerimiz olsun. 🎮💖';
-  } else if (hasGamer && hasBirthday) {
-    personalizedGiftNote = 'Yeni yaşın kutlu olsun! Tüm oyunlarda en yüksek skorlar, kesintisiz ping ve bol galibiyetler seninle olsun! 🎮🎂';
+    if (hasBirthday) {
+      personalizedGiftNote = 'Hayatıma renk katan en tatlı oyun arkadaşım, biricik eşim... Doğum günün kutlu olsun! Yeni yaşında ve tüm oyun bölümlerinde el ele en yüksek skorları yapacağımız harika bir yıl dilerim! 🎮💖🎂';
+    } else {
+      personalizedGiftNote = 'Hayatıma neşe katan en tatlı oyun arkadaşım... İyi ki varsın! Birlikte en keyifli skorları imzalayacağımız harika günlerimiz olsun. 🎮💖';
+    }
   } else if (hasGamer) {
-    personalizedGiftNote = 'Oyun keyfin hiç bitmesin, kahven hep sıcak kalsın! Keyifli ve neşeli oyun saatleri dilerim. 🎮☕';
-  } else if (hasDev && hasBirthday) {
-    personalizedGiftNote = 'Kodların hatasız derlensin, kahven hiç soğumasın! Yeni yaşında tüm projelerin ve hayallerin tıkır tıkır işlesin! 🚀☕🎂';
+    if (hasBirthday) {
+      personalizedGiftNote = 'Yeni yaşın kutlu olsun! Tüm oyunlarda en yüksek skorlar, kesintisiz ping ve bol galibiyetler seninle olsun! 🎮🎂';
+    } else {
+      personalizedGiftNote = 'Oyun keyfin hiç bitmesin, kahven hep sıcak kalsın! Keyifli ve neşeli oyun saatleri dilerim. 🎮☕';
+    }
   } else if (hasDev) {
-    personalizedGiftNote = 'Kodların hatasız derlensin, kahven hiç soğumasın! Tüm projelerinde sonsuz başarılar dilerim! 🚀☕';
+    if (hasBirthday) {
+      personalizedGiftNote = 'Kodların hatasız derlensin, kahven hiç soğumasın! Yeni yaşında tüm projelerin ve hayallerin tıkır tıkır işlesin! İyi ki doğdun! 🚀☕🎂';
+    } else {
+      personalizedGiftNote = 'Kodların hatasız derlensin, kahven hiç soğumasın! Tüm projelerinde sonsuz başarılar dilerim! 🚀☕';
+    }
   } else if (hasArchitect) {
     personalizedGiftNote = 'Hayatıma ve çevrene kattığın o muazzam estetik için sonsuz teşekkürler. Tasarladığın tüm güzel yarınlar seninle olsun! 📐✨';
   } else if (hasTeacher) {
@@ -327,10 +351,12 @@ export function generateClientFallbackRecommendation(prompt: string, requestedBu
     personalizedGiftNote = 'Bebeğinle birlikte huzur, sağlık ve kahkahalarla dolu muazzam bir ömür dilerim. İyi ki varsın! 👶💖';
   } else if (hasCat) {
     personalizedGiftNote = 'En tatlı pati dostun ve sıcacık kahven eşliğinde huzur dolu anlar seninle olsun! Paticiklerle dolu harika bir gün dilerim. 🐾☕';
-  } else if (hasSpouse && hasBirthday) {
-    personalizedGiftNote = 'Gülüşüyle dünyamı aydınlatan biricik eşim... Doğum günün kutlu olsun! Seninle geçen her an benim için en büyük hediye. Seni çok seviyorum! 💖🎂';
   } else if (hasSpouse) {
-    personalizedGiftNote = 'Gülüşünle dünyamı güzelleştiren insan... İyi ki varsın, seninle geçecek her an en büyük hediye. Seni çok seviyorum! 💖✨';
+    if (hasBirthday) {
+      personalizedGiftNote = 'Gülüşüyle dünyamı aydınlatan biricik eşim... Doğum günün kutlu olsun! Seninle geçen her an benim için en büyük hediye. Seni çok seviyorum! 💖🎂';
+    } else {
+      personalizedGiftNote = 'Gülüşünle dünyamı güzelleştiren insan... İyi ki varsın, seninle geçecek her an en büyük hediye. Seni çok seviyorum! 💖✨';
+    }
   } else if (hasBirthday) {
     personalizedGiftNote = 'Senin gibi harika bir insanın varlığı en büyük armağan! Yeni yaşın sağlık, neşe ve bu kutudaki gibi tatlı sürprizlerle dolsun. İyi ki doğdun! 🎉🎂';
   } else {
@@ -343,8 +369,10 @@ export function generateClientFallbackRecommendation(prompt: string, requestedBu
   const topItem2 = finalProducts[1]?.name || 'sürpriz hediyeler';
 
   let aiExplanation = '';
-  if (isChildOrNephew) {
-    aiExplanation = `Minik yeğeninin yeni yaşı için ona neşe katacak yumuşacık sevimli peluş tavşanı ve lezzetli sürpriz parçaları ${totalPrice} TL bütçene tam oturacak şekilde seçtik! 🧸🎈`;
+  if (hasHumor) {
+    aiExplanation = `Truva / şaka konseptinin neşeli ruhuna tam uyan esprili sürpriz parçaları ve lezzetli ikramları ${totalPrice} TL bütçene mükemmel oturacak şekilde kahkaha garantili olarak seçtik! 🎭🎁`;
+  } else if (isChildOrNephew) {
+    aiExplanation = `Minik yeğeninin neşeli dünyası için ona mutluluk katacak sevimli ve lezzetli sürpriz parçaları ${totalPrice} TL bütçene tam oturacak şekilde seçtik! 🧸🎈`;
   } else if (hasGamer && hasSpouse) {
     aiExplanation = `Eşinin oyun tutkusunu ve verdiğin değeri göz önüne alarak; oyun saatlerinde keyifle eşlik edecek ${topItem1} ve ${topItem2} gibi neşeli parçaları ${totalPrice} TL bütçene mükemmel oturacak şekilde seçtik!`;
   } else {

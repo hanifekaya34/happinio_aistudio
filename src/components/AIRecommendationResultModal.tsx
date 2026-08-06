@@ -68,6 +68,29 @@ export default function AIRecommendationResultModal({
   const [recipientName, setRecipientName] = useState('Sevgili Dostum');
   const [senderName, setSenderName] = useState('');
   const [giftNote, setGiftNote] = useState(result.personalizedGiftNote);
+
+  // Sync state whenever result changes
+  React.useEffect(() => {
+    if (result) {
+      setItems(result.matchedItems);
+      setGiftNote(result.personalizedGiftNote);
+
+      const titleLower = (result.boxTitle || '').toLowerCase();
+      if (titleLower.includes('yeğen') || titleLower.includes('yegen') || titleLower.includes('minik')) {
+        setRecipientName('Canım Yeğenim');
+      } else if (titleLower.includes('eşim') || titleLower.includes('esim')) {
+        setRecipientName('Biricik Eşim');
+      } else if (titleLower.includes('anne')) {
+        setRecipientName('Canım Annem');
+      } else if (titleLower.includes('öğretmen')) {
+        setRecipientName('Değerli Öğretmenim');
+      } else if (titleLower.includes('dost') || titleLower.includes('arkadaş')) {
+        setRecipientName('Sevgili Dostum');
+      } else {
+        setRecipientName('Sevgiliye / Özel Biri');
+      }
+    }
+  }, [result]);
   const [isEditingNote, setIsEditingNote] = useState(false);
   const [noteCardFont, setNoteCardFont] = useState<'serif' | 'sans' | 'handwriting'>('handwriting');
   const [selectedProductDetail, setSelectedProductDetail] = useState<Product | null>(null);
@@ -132,17 +155,91 @@ export default function AIRecommendationResultModal({
   };
 
   const getItemReasoning = (item: Product) => {
-    if (item.originCity)
-      return `${item.originCity} şehrimizin özgün yerel el emeği ve otantik dokusu göz önüne alınarak özel olarak seçildi.`;
-    if (item.category.includes('Kahve'))
-      return 'Kahve ve çay keyfini zirveye taşımak, huzurlu sohbet saatlerine lezzet katmak için harmanlandı.';
-    if (item.category.includes('Seramik'))
-      return 'Estetik el yapımı seramik tasarımı ve günlük kullanım zarafeti nedeniyle kutuya eklendi.';
-    if (item.category.includes('Şaka'))
-      return 'Esprili mizahi dokunuş ve sürpriz neşe katsayısını katlamak için eğlenceli parça olarak belirlendi.';
-    if (item.category.includes('Tatlı') || item.category.includes('Atıştırmalık'))
-      return 'Kutuyu gurme lezzetlerle tatlandırmak ve unutulmaz bir damak tadı sunmak amacıyla eklendi.';
-    return 'Kullanıcının belirttiği ilgi alanları, duygu analizi ve hediye konsept ruhuna tam uyum sağlayan ideal parça olarak Joy-Genie tarafından seçildi.';
+    const nameLower = item.name.toLowerCase();
+    const catLower = item.category.toLowerCase();
+    const tags = item.tags || [];
+    const titleLower = (result?.boxTitle || '').toLowerCase();
+    const explanationLower = (result?.aiExplanation || '').toLowerCase();
+
+    const isKidRecipient =
+      titleLower.includes('yeğen') ||
+      titleLower.includes('yegen') ||
+      titleLower.includes('minik') ||
+      titleLower.includes('bebek') ||
+      titleLower.includes('çocuk') ||
+      explanationLower.includes('yeğen') ||
+      explanationLower.includes('çocuk');
+
+    const isGamerRecipient = titleLower.includes('oyuncu') || titleLower.includes('gamer') || titleLower.includes('oyun');
+    const isDevRecipient = titleLower.includes('yazılımcı') || titleLower.includes('kod');
+    const isArchitectRecipient = titleLower.includes('mimar');
+
+    if (item.originCity) {
+      return `${item.originCity} zanaatkarlarının özgün el emeği ve yerel dokusu göz önüne alınarak bu konsepte özel seçildi.`;
+    }
+
+    if (isKidRecipient) {
+      if (tags.includes('pelus') || tags.includes('bebek') || nameLower.includes('tavşan') || nameLower.includes('oyuncak') || nameLower.includes('kedicik')) {
+        return 'Minik yeğeninizin odasına ve oyun saatlerine neşe katacak, sarılmalık yumuşacık sevimli bir oyun arkadaşı.';
+      }
+      if (tags.includes('müzik kutusu') || nameLower.includes('müzik kutusu')) {
+        return 'Miniklerin uykudan önce veya oyun arasında severek dinleyeceği masalsı melodi ve sevimli tasarım.';
+      }
+      if (catLower.includes('tatlı') || tags.includes('çikolata') || tags.includes('trüf') || tags.includes('lokum') || nameLower.includes('çikolata')) {
+        return 'Çocukların bayılacağı, kutlamaya lezzet ve rengarenk neşe katacak leziz sürpriz atıştırmalık.';
+      }
+      if (tags.includes('sticker') || tags.includes('defter') || tags.includes('kalem')) {
+        return 'Minik ellerin resim yaparken ve hayal dünyasını renklendirirken keyifle kullanacağı sevimli kırtasiye parçası.';
+      }
+      return `${item.name}, minik yeğeninizin yaş grubuna ve neşeli doğum günü ruhuna uygun sevimli bir sürpriz olarak eklendi.`;
+    }
+
+    if (isGamerRecipient) {
+      if (catLower.includes('kupa') || tags.includes('kupa') || nameLower.includes('kupa')) {
+        return 'Gece oyun seanslarında kahve ve içecek keyfini sıcak tutacak, gamer ruhuna tam uyan özel tasarım.';
+      }
+      if (catLower.includes('şaka') || tags.includes('komik') || tags.includes('sticker')) {
+        return 'Oyun masasına ve yayın ortamına mizahi bir dokunuş katacak eğlenceli gamer detayı.';
+      }
+    }
+
+    if (isDevRecipient || isArchitectRecipient) {
+      if (catLower.includes('kitap') || tags.includes('defter') || tags.includes('planlayıcı')) {
+        return 'Yoğun kodlama ve tasarım süreçlerinde fikirleri, çizimleri ve notları kaydetmek için ideal kaliteli masaüstü arkadaşı.';
+      }
+      if (catLower.includes('kahve') || tags.includes('kahve')) {
+        return 'Uzun odaklanma ve proje saatlerinde enerji ve motivasyonu taze tutacak taze gurme kahve aroması.';
+      }
+    }
+
+    if (tags.includes('pelus') || tags.includes('bebek') || nameLower.includes('tavşan') || nameLower.includes('oyuncak') || nameLower.includes('kedicik')) {
+      return 'Yumuşacık dokusu ve sevimli tasarımıyla iç ısıtan tatlı bir sürpriz parça.';
+    }
+    if (tags.includes('müzik kutusu') || nameLower.includes('müzik kutusu')) {
+      return 'Nostaljik melodisi ve sevimli tasarımıyla dinleyenlerin ruhunu dinlendirecek masalsı bir dokunuş.';
+    }
+    if (catLower.includes('kitap') || tags.includes('defter') || tags.includes('planlayıcı') || tags.includes('kalem') || nameLower.includes('defter')) {
+      return 'Günün fikirlerini, planlarını ve özel anılarını keyifle kaydetmesi için tasarlanmış şık bir yazı arkadaşı.';
+    }
+    if (catLower.includes('kupa') || tags.includes('kupa') || tags.includes('termos') || nameLower.includes('kupa') || nameLower.includes('mug')) {
+      return 'Gün içi kahve ve çay molalarını renklendirecek, her yudumda tebessüm ettirecek özel tasarım kupa.';
+    }
+    if (tags.includes('mum') || tags.includes('lavanta') || tags.includes('bitki çayı') || nameLower.includes('mum')) {
+      return 'Huzurlu ve sakin bir ortam yaratarak dinlenme saatlerine sıcacık bir koku ve atmosfer katması için seçildi.';
+    }
+    if (catLower.includes('tatlı') || catLower.includes('atıştırmalık') || tags.includes('çikolata') || tags.includes('lokum') || tags.includes('trüf') || nameLower.includes('çikolata')) {
+      return 'Kutuya nefis bir tatlılık ve damak çatlatan gurme bir kutlama lezzeti katmak amacıyla eklendi.';
+    }
+    if (catLower.includes('şaka') || tags.includes('komik') || tags.includes('çorap') || tags.includes('sticker') || nameLower.includes('çorap')) {
+      return 'Konsepte eğlenceli, esprili ve neşeli bir dokunuş katarak yüzlerde kocaman bir tebessüm oluşturması için eklendi.';
+    }
+    if (catLower.includes('kahve') || tags.includes('kahve') || nameLower.includes('kahve')) {
+      return 'Taze çekilmiş gurme aromasıyla sohbetlere ve tazeleyici molalara lezzet katmak için seçildi.';
+    }
+    if (catLower.includes('seramik') || tags.includes('seramik')) {
+      return 'El yapımı estetik seramik dokusu ve zarafetiyle ortama ve masaya şıklık katması için eklendi.';
+    }
+    return `${item.name}, hediye konseptinizin zarafetini ve özel duygusunu tamamlayan özenli bir parça olarak seçildi.`;
   };
 
   const handleCopyLink = () => {
