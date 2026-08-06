@@ -11,7 +11,7 @@ app.use(express.json());
 
 // Initialize Gemini Client
 const getGeminiClient = () => {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
     return null;
   }
@@ -56,19 +56,13 @@ Kullanıcının belirlediği hedef bütçe: ${requestedBudget} TL.
 Seçeceğin 3-5 ürünün TOPLAM FİYATI, belirlenen bu ${requestedBudget} TL bütçesine MÜMKÜN OLDUĞUNCA ÇOK YAKIN (yaklaşık ±%5-10 bandında) olmalıdır.
 
 Kurallar:
-1. Kullanıcının belirttiği meslek, alıcı (kız kardeş, abla, erkek kardeş, abi, bebek, çocuk, yeğen, eş, sevgili, arkadaş, anne, baba vb.), ilgi alanları, amaç ve duygusal tonu analiz et.
-2. KRİTİK UNİQUE ÜRÜN KURALI: matchedItemIds dizisine KESİNLİKLE aynı ürünü birden fazla ekleme! Tüm seçilen ürün ID'leri birbirinden %100 FARKLI ve benzersiz olmalıdır.
-3. KRİTİK ALICI VE İLİŞKİ HİTAP KURALI: Promptta belirtilen ilişkiye (kız kardeş, abla, erkek kardeş, abi, anne, baba, eş, sevgili, arkadaş vb.) BİREBİR uygun bir dille ve hitapla yaz!
-   - Eğer hediye KIZ KARDEŞ, ABLA, KARDEŞ içinse; kart notunda ("personalizedGiftNote") ve kutu başlığında ("boxTitle") KESİNLİKLE 'sevgilim', 'aşkım', 'biricik eşim' gibi romantik ifadeler KULLANMA! Bunun yerine 'Canım Kız Kardeşim', 'Canım Ablam', 'Canım Kardeşim' gibi sevecen kardeşlik hitaplarını kullan.
-   - Eğer hediye çocuk/bebek/yeğen içinse; KESİNLİKLE yetişkin kahveleri, termoslar, babalar günü ürünleri seçme; oyuncak, sevimli kupa, tatlı çikolata seç.
-   - Yalnızca promptta açıkça eş, sevgili veya romantik ilişki belirtilmişse romantik dil kullan.
-4. KRİTİK HEDİYE NOTU KURALI: Eğer kullanıcı promptunda açıkça "doğum günü", "yaş günü" veya "yeni yaş" BELİRTİLMEDİYSE, kart notunda ("personalizedGiftNote") KESİNLİKLE "İyi ki doğdun", "Doğum günün kutlu olsun" veya "Yeni yaşın" YAZMA! Konseptsiz genel tebrikler verme.
-5. KRİTİK SEÇİM NEDENİ / AÇIKLAMA KURALI: aiExplanation alanında, seçtiğin ürünlerin neden tam da bu kişiye (örn: kız kardeş, yazılımcı dost, yeni anne) ve konseptine uygun olduğunu samimi, tatlı ve detaylıca açıkla. Mekanik veya jenerik yüzdeler YAZMA.
-6. Ürün veritabanındaki ID'leri seç. Fiyatların toplamı ${requestedBudget} TL bütçesine çok yakın olsun.
-7. Sevecen, sevimli, alıcıya/konsepte özgü Türkçe bir hediye kartı notu ("personalizedGiftNote") yaz.
-8. Kutuya konsepte ve kişiye özel sevimli bir isim ver ("boxTitle").
-9. Neden bu ürünleri seçtiğini açıklayan tatlı, samimi bir Hapy açıklaması yaz ("aiExplanation").
-10. Yanıtını STRICT JSON formatında ver.
+1. Kullanıcının belirttiği ilgi alanları (kedi, kahve, kitap, bebek, şehir, şaka/truva, kurumsal, vb.), amaç ve duygusal tonu analiz et.
+2. Ürün veritabanındaki ID'leri (ör. PRD-001, PRD-004) seç. Seçtiğin ürünlerin ID'lerinin fiyatlarının toplamı ${requestedBudget} TL bütçesine çok yakın olsun.
+3. Sevecen, sevimli ve kişiye özel Türkçe bir hediye kartı notu ("personalizedGiftNote") kaleme al.
+4. Kutuya sevimli ve özel bir isim ver ("boxTitle").
+5. Neden bu ürünleri seçtiğini açıklayan tatlı, samimi ve duygusal bir Hapy açıklaması yaz ("aiExplanation").
+ÖNEMLİ KURAL: Asla "%97.5", "%100" gibi yüzde oranları, matematiksel bütçe uyum yüzdeleri veya "Toplam tutar 1560 TL ile 1600 TL bütçenize %97.5 oranında tam uyum sağlamaktadır" gibi mekanik yüzde ve bütçe hesap cümleleri YAZMA! Yüzde veya oran cümleleri yazmak KESİNLİKLE YASAKTIR. Açıklamada sadece hediye konseptinin güzelliğine, ürünlerin birbiriyle estetik uyumuna ve sevdiklerine yaşatacağı neşeye odaklan.
+6. Yanıtını STRICT JSON formatında ver.
 `;
 
       const response = await ai.models.generateContent({
@@ -99,8 +93,8 @@ Kurallar:
       const jsonText = response.text ? response.text.trim() : '';
       if (jsonText) {
         const parsed = JSON.parse(jsonText);
-        const uniqueItemIds = Array.from(new Set(parsed.matchedItemIds || []));
-        let matchedItems = PRODUCTS.filter((p) => uniqueItemIds.includes(p.id));
+        // Hydrate items from PRODUCTS database
+        let matchedItems = PRODUCTS.filter((p) => parsed.matchedItemIds.includes(p.id));
         if (matchedItems.length === 0) matchedItems = PRODUCTS.slice(0, 4);
 
         // Optimize subset to match requestedBudget closely if needed
@@ -282,10 +276,4 @@ async function startServer() {
   });
 }
 
-// Export express app for serverless platforms like Vercel
-export default app;
-
-// Start Express Server only when not running on Vercel
-if (!process.env.VERCEL) {
-  startServer();
-}
+startServer();

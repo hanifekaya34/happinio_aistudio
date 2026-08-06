@@ -17,7 +17,6 @@ import {
   CUSTOMER_REVIEWS,
 } from './data/mockData';
 import { Language, translations } from './i18n/translations';
-import { generateAIGiftBox } from './utils/aiGenerator';
 
 // Components
 import SEOHead from './components/SEOHead';
@@ -210,10 +209,16 @@ export default function App() {
     setIsAiLoading(true);
 
     try {
-      const data = await generateAIGiftBox(promptText, budget);
+      const response = await fetch('/api/ai-gift-recommendation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: promptText, targetBudget: budget || 1000 }),
+      });
+
+      const data = await response.json();
       setIsAiLoading(false);
 
-      if (data && data.boxTitle && data.matchedItems) {
+      if (data.boxTitle && data.matchedItems) {
         setAiResult(data);
         setCurrentView('ai-result');
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -229,8 +234,8 @@ export default function App() {
       setIsAiLoading(false);
       alert(
         lang === 'tr'
-          ? 'Yapay zeka önerisi oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.'
-          : 'Could not create AI recommendation. Please try again.'
+          ? 'Yapay zeka sunucusu ile bağlantı kurulamadı.'
+          : 'Could not connect to AI recommendation server.'
       );
     }
   };

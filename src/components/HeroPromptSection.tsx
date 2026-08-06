@@ -626,14 +626,6 @@ export default function HeroPromptSection({ onGenerateAIBox, isLoading, lang = '
                       setPromptInput(e.target.value);
                     }
                   }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      if (promptInput.trim() && !isLoading) {
-                        onGenerateAIBox(promptInput.trim(), maxBudget);
-                      }
-                    }
-                  }}
                   placeholder={lang === 'tr'
                     ? "Örn: Eskişehir'de mimar olan, kahve tutkunu ve espri yapmayı seven çocukluk arkadaşım için doğum günü hediyesi..."
                     : "e.g., Birthday surprise for my architect friend who studied in Eskişehir, loves coffee, humor, and design..."}
@@ -647,7 +639,7 @@ export default function HeroPromptSection({ onGenerateAIBox, isLoading, lang = '
                     <button
                       type="button"
                       onClick={() => handleToggleVoice(setPromptInput)}
-                      className={`text-xs font-bold px-3.5 py-1.5 rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer ${
+                      className={`text-xs font-bold px-3.5 py-1.5 rounded-xl border transition-all flex items-center gap-1.5 ${
                         isListening
                           ? 'bg-purple-700 text-white border-purple-800 shadow-md animate-bounce'
                           : 'bg-white hover:bg-purple-100 text-purple-800 border-purple-200'
@@ -684,20 +676,20 @@ export default function HeroPromptSection({ onGenerateAIBox, isLoading, lang = '
                   />
                 </div>
 
-                {/* Submit AI Button - Big & Touch-Friendly for iPhone */}
+                {/* Submit AI Button */}
                 <button
                   type="submit"
                   disabled={isLoading || !promptInput.trim()}
-                  className="w-full sm:w-auto bg-purple-800 hover:bg-purple-900 active:scale-98 text-white px-8 py-4 sm:py-3.5 rounded-2xl sm:rounded-xl font-black transition-all shadow-lg shadow-purple-200/80 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2.5 text-sm shrink-0 cursor-pointer"
+                  className="w-full sm:w-auto bg-purple-800 hover:bg-purple-900 text-white px-7 py-3.5 rounded-xl font-bold transition-all shadow-md shadow-purple-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm shrink-0"
                 >
                   {isLoading ? (
                     <>
-                      <div className="w-4.5 h-4.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                       <span>{tHero.buttonLoading}</span>
                     </>
                   ) : (
                     <>
-                      <Sparkles className="w-4.5 h-4.5 text-amber-300 fill-amber-300 animate-pulse" />
+                      <Sparkles className="w-4 h-4 text-amber-300" />
                       <span>{tHero.buttonNormal}</span>
                     </>
                   )}
