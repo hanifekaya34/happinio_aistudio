@@ -1,28 +1,27 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, Type } from '@google/genai';
 import { PRODUCTS } from '../src/data/mockData';
+import { generateClientFallbackRecommendation } from '../src/utils/aiGenerator';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  try {
-    let bodyData = req.body;
-    if (typeof bodyData === 'string') {
-      try {
-        bodyData = JSON.parse(bodyData);
-      } catch (e) {
-        bodyData = {};
-      }
+  let bodyData = req.body;
+  if (typeof bodyData === 'string') {
+    try {
+      bodyData = JSON.parse(bodyData);
+    } catch (e) {
+      bodyData = {};
     }
-    const { prompt, targetBudget } = bodyData || {};
-    if (!prompt || typeof prompt !== 'string') {
-      return res.status(400).json({ error: 'Lütfen geçerli bir hediye promptu yazın.' });
-    }
+  }
+  const { prompt, targetBudget } = bodyData || {};
+  const userPrompt = typeof prompt === 'string' && prompt.trim().length > 0 ? prompt.trim() : 'Özel Hediye Kutusu';
+  let requestedBudget = typeof targetBudget === 'number' && targetBudget > 0 ? targetBudget : 1000;
 
-    let requestedBudget = typeof targetBudget === 'number' && targetBudget > 0 ? targetBudget : 1000;
-    const promptMatch = prompt.match(/(\d{3,4})\s*(tl|lira|₺)?/i);
+  try {
+    const promptMatch = userPrompt.match(/(\d{3,4})\s*(tl|lira|₺)?/i);
     if (promptMatch && (!targetBudget || targetBudget === 1000)) {
       const parsedVal = parseInt(promptMatch[1], 10);
       if (parsedVal >= 200 && parsedVal <= 5000) requestedBudget = parsedVal;
@@ -51,17 +50,17 @@ Kullanıcının belirlediği hedef bütçe: ${requestedBudget} TL.
 Seçeceğin 3-5 ürünün TOPLAM FİYATI, belirlenen bu ${requestedBudget} TL bütçesine MÜMKÜN OLDUĞUNCA ÇOK YAKIN (yaklaşık ±%5-10 bandında) olmalıdır.
 
 Kurallar:
-1. Kullanıcının belirttiği ilgi alanları (kedi, kahve, kitap, bebek, şehir, şaka/truva, kurumsal, vb.), amaç ve duygusal tonu analiz et.
+1. Kullanıcının belirttiği meslek, ilgi alanları (yazılımcı, mimar, kedi, kahve, kitap, bebek, şehir, şaka/truva, kurumsal, vb.), amaç ve duygusal tonu analiz et.
 2. Ürün veritabanındaki ID'leri seç. Fiyatların toplamı ${requestedBudget} TL bütçesine çok yakın olsun.
-3. Sevecen, sevimli ve kişiye özel Türkçe bir hediye kartı notu ("personalizedGiftNote") yaz.
-4. Kutuya sevimli ve özel bir isim ver ("boxTitle").
+3. Sevecen, sevimli, mesleğe/konsepte özgü Türkçe bir hediye kartı notu ("personalizedGiftNote") yaz.
+4. Kutuya konsepte ve kişiye özel sevimli bir isim ver ("boxTitle").
 5. Neden bu ürünleri seçtiğini açıklayan tatlı, samimi bir Hapy açıklaması yaz ("aiExplanation").
 6. Yanıtını STRICT JSON formatında ver.
 `;
 
       const response = await ai.models.generateContent({
         model: 'gemini-3.6-flash',
-        contents: `Kullanıcı Promptu: "${prompt}" (Hedef Bütçe: ${requestedBudget} TL)`,
+        contents: `Kullanıcı Promptu: "${userPrompt}" (Hedef Bütçe: ${requestedBudget} TL)`,
         config: {
           systemInstruction,
           responseMimeType: 'application/json',
@@ -106,44 +105,12 @@ Kurallar:
     }
 
     // Smart Fallback Algorithm
-    const lowerPrompt = prompt.toLowerCase();
-    let selectedProducts = PRODUCTS.filter((p) =>
-      p.tags.some((tag) => lowerPrompt.includes(tag.toLowerCase())) ||
-      lowerPrompt.includes(p.name.toLowerCase()) ||
-      lowerPrompt.includes(p.category.toLowerCase())
-    );
-
-    if (selectedProducts.length < 3) {
-      selectedProducts = PRODUCTS.slice(0, 4);
-    }
-
-    const finalProducts = selectedProducts.slice(0, 4);
-    const totalPrice = finalProducts.reduce((sum, item) => sum + item.price, 0);
-
-    return res.status(200).json({
-      boxTitle: lowerPrompt.includes('eskişehir') ? "Eskişehir'in Sanatçı Ruhu & Oyun Keyfi Kutusu" : 'Kişiye Özel Happinio Sürprizi',
-      tagline: 'Kişisel İlgi Alanlarına Özel Tasarlandı',
-      matchedItems: finalProducts,
-      totalPrice,
-      matchScore: 97,
-      personalizedGiftNote: 'İyi ki doğdun! Senin kadar tatlı ve özel sürprizlerle dolu günler dilerim.',
-      suggestedBoxCategory: 'custom',
-      aiExplanation: 'İstediğin konsept ve ilgi alanlarına tam uyum sağlayan sevdiklerini mutlu edecek en özel parçaları bir araya getirdik!',
-    });
+    const fallbackResult = generateClientFallbackRecommendation(userPrompt, requestedBudget);
+    return res.status(200).json(fallbackResult);
   } catch (error) {
     console.error('API Error:', error);
-    // Return fallback on status 200 to prevent 500 serverless crashes on Vercel
-    const lowerPrompt = (req.body && typeof req.body.prompt === 'string' ? req.body.prompt : '').toLowerCase();
-    const finalProducts = PRODUCTS.slice(0, 4);
-    return res.status(200).json({
-      boxTitle: lowerPrompt.includes('eskişehir') ? "Eskişehir'in Sanatçı Ruhu & Oyun Keyfi Kutusu" : 'Kişiye Özel Happinio Sürprizi',
-      tagline: 'Kişisel İlgi Alanlarına Özel Tasarlandı',
-      matchedItems: finalProducts,
-      totalPrice: finalProducts.reduce((s, i) => s + i.price, 0),
-      matchScore: 97,
-      personalizedGiftNote: 'İyi ki doğdun! Senin kadar tatlı ve özel sürprizlerle dolu günler dilerim.',
-      suggestedBoxCategory: 'custom',
-      aiExplanation: 'İstediğin konsept ve ilgi alanlarına tam uyum sağlayan sevdiklerini mutlu edecek en özel parçaları bir araya getirdik!',
-    });
+    // Return smart fallback on status 200 to prevent serverless crashes on Vercel
+    const fallbackResult = generateClientFallbackRecommendation(userPrompt, requestedBudget);
+    return res.status(200).json(fallbackResult);
   }
 }
