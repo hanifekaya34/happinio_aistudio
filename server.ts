@@ -11,7 +11,7 @@ app.use(express.json());
 
 // Initialize Gemini Client
 const getGeminiClient = () => {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
   if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
     return null;
   }
@@ -56,17 +56,20 @@ Kullanıcının belirlediği hedef bütçe: ${requestedBudget} TL.
 Seçeceğin 3-5 ürünün TOPLAM FİYATI, belirlenen bu ${requestedBudget} TL bütçesine MÜMKÜN OLDUĞUNCA ÇOK YAKIN (yaklaşık ±%5-10 bandında) olmalıdır.
 
 Kurallar:
-1. Kullanıcının belirttiği ilgi alanları (kedi, kahve, kitap, bebek, şehir, şaka/truva, kurumsal, vb.), amaç ve duygusal tonu analiz et.
-2. Ürün veritabanındaki ID'leri (ör. PRD-001, PRD-004) seç. Seçtiğin ürünlerin ID'lerinin fiyatlarının toplamı ${requestedBudget} TL bütçesine çok yakın olsun.
-3. Sevecen, sevimli ve kişiye özel Türkçe bir hediye kartı notu ("personalizedGiftNote") kaleme al.
-4. Kutuya sevimli ve özel bir isim ver ("boxTitle").
-5. Neden bu ürünleri seçtiğini açıklayan tatlı, samimi ve duygusal bir Hapy açıklaması yaz ("aiExplanation").
-ÖNEMLİ KURAL: Asla "%97.5", "%100" gibi yüzde oranları, matematiksel bütçe uyum yüzdeleri veya "Toplam tutar 1560 TL ile 1600 TL bütçenize %97.5 oranında tam uyum sağlamaktadır" gibi mekanik yüzde ve bütçe hesap cümleleri YAZMA! Yüzde veya oran cümleleri yazmak KESİNLİKLE YASAKTIR. Açıklamada sadece hediye konseptinin güzelliğine, ürünlerin birbiriyle estetik uyumuna ve sevdiklerine yaşatacağı neşeye odaklan.
-6. Yanıtını STRICT JSON formatında ver.
+1. Kullanıcının belirttiği meslek, alıcı (bebek, çocuk, yeğen, eş, arkadaş, vb.), ilgi alanları, amaç ve duygusal tonu analiz et.
+2. KRİTİK UNİQUE ÜRÜN KURALI: matchedItemIds dizisine KESİNLİKLE aynı ürünü birden fazla ekleme! Tüm seçilen ürün ID'leri birbirinden %100 FARKLI ve benzersiz olmalıdır.
+3. KRİTİK YAŞ & ALICI KURALI: Eğer prompt bir çocuk, minik bebek veya yeğen (örn: "2 yaşındaki yeğenim") içinse, KESİNLİKLE kahve, yetişkin termos, 'Kral Baba' çorabı, kurumsal malzemeler veya yetişkin kart notu SEÇME! Bunun yerine peluş oyuncak, müslin örtü, sevimli kupa, trüf çikolata, müzik kutusu gibi çocuklara uygun neşeli ve sevimli ürünleri seç. Hediye kartı notunu da minik çocuğa/yeğene söylenecek tatlı, sevgi dolu bir dille yaz.
+4. KRİTİK HEDİYE NOTU KURALI: Eğer kullanıcı promptunda açıkça "doğum günü", "yaş günü" veya "yeni yaş" BELİRTİLMEDİYSE, kart notunda ("personalizedGiftNote") KESİNLİKLE "İyi ki doğdun", "Doğum günün kutlu olsun" veya "Yeni yaşın" YAZMA! Konseptsiz genel tebrikler verme; örneğin Truva/şaka/esprili kutular için bol kahkahalı mizahi bir not, tebrik için başarı/teşekkür notu yaz.
+5. KRİTİK SEÇİM NEDENİ / AÇIKLAMA KURALI: aiExplanation alanında, seçtiğin ürünlerin neden bu kişinin ilgi alanlarına/konseptine (örn: Truva şakası, çocuk hediyesi, kahve gurmesi) birebir uyduğunu detaylıca ve samimi bir dille açıkla. Mekanik veya jenerik yüzdeler YAZMA.
+6. Ürün veritabanındaki ID'leri seç. Fiyatların toplamı ${requestedBudget} TL bütçesine çok yakın olsun.
+7. Sevecen, sevimli, alıcıya/konsepte özgü Türkçe bir hediye kartı notu ("personalizedGiftNote") yaz.
+8. Kutuya konsepte ve kişiye özel sevimli bir isim ver ("boxTitle").
+9. Neden bu ürünleri seçtiğini açıklayan tatlı, samimi bir Hapy açıklaması yaz ("aiExplanation").
+10. Yanıtını STRICT JSON formatında ver.
 `;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.6-flash',
+        model: 'gemini-2.5-flash',
         contents: `Kullanıcı Promptu: "${prompt}" (Hedef Bütçe: ${requestedBudget} TL)`,
         config: {
           systemInstruction,
